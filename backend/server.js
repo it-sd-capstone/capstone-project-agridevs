@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
+const moment = require('moment-timezone');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -24,9 +25,13 @@ const pool = new Pool({
 // Test connection to the database
 app.get('/test-db', async (req, res) => {
     try {
-        // Query to check the database connection
-        const result = await pool.query('SELECT NOW()');
-        res.send(`Database connected successfully: ${result.rows[0].now}`);
+        const client = await pool.connect();
+        const result = await client.query('SELECT NOW()');
+        client.release();
+
+        const centralTime = moment(result.rows[0].now).tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss');
+
+        res.send(`Database is connected. Central Time: ${centralTime}`);
     } catch (err) {
         console.error(err);
         res.status(500).send('Database connection failed');
