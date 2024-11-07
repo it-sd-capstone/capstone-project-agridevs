@@ -1,4 +1,3 @@
-// Load environment variables from .env file
 require('dotenv').config();
 
 const express = require('express');
@@ -22,6 +21,23 @@ const pool = new Pool({
     },
 });
 
+// Test connection to the database
+app.get('/test-db', async (req, res) => {
+    try {
+        // Query to check the database connection
+        const result = await pool.query('SELECT NOW()');
+        res.send(`Database connected successfully: ${result.rows[0].now}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Database connection failed');
+    }
+});
+
+// Example placeholder for a main route
+app.get('/', (req, res) => {
+    res.send('Welcome to the Profit Map Web App Backend!');
+});
+
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+    console.log(`Server is running on port ${port}`);
 });
