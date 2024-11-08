@@ -18,12 +18,24 @@ Users can upload CSV files, which are then processed to generate a map with an o
 
 ## Installation Commands
 ### Backend
-- (insert commands here)
-- 
+- Clone the repository:  
+  git clone https://github.com/it-sd-capstone/capstone-project-agridevs.git
+- Navigate to the backend folder:  
+  cd capstone-project-agridevs/backend
+- Install dependencies:  
+  npm install
+- Start the backend server:  
+  npm start
+- The backend should now be running at http://localhost:5000.
 
 ### Frontend
-- (insert commands here)
--
+- Navigate to the frontend folder:  
+  cd ../frontend
+- Install dependencies:  
+  npm install
+- Start the frontend development server:  
+  npm start
+- Open a browser and navigate to http://localhost:3000 to view the frontend.
 
 ## Setup
 This could be a numbered or paragraph section explaining how we ended up installing, validating with tests, and
