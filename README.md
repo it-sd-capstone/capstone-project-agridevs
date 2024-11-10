@@ -31,8 +31,8 @@ Users can upload CSV files, which are then processed to generate a map with an o
     - express: A node.js web application framework to manage requests/responses
     - pg: Allows node.js apps to communicate with PostgreSQL databases
     - dotenv: Loads environmental variables that helps manage sensitive values like our database credentials
-        - cors: Cross-Origin Resource Sharing, helps with resources on a server to be requested from another domain
-          (Render/GH pages)
+    - cors: Cross-Origin Resource Sharing, helps with resources on a server to be requested from another domain
+      (Render/GH pages)
 4. Running the backend
     - If you wanted to run it locally, you could use npm start
     - The backend is also deployed on Render, look at link above
