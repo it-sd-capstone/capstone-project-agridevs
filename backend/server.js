@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
+const path = require('path');
 const moment = require('moment-timezone');
 
 const app = express();
@@ -13,14 +14,17 @@ app.use(cors());
 // Setup PostgreSQL connection using DATABASE_URL from environment variables
 const connectionString =
     process.env.DATABASE_URL ||
-    `postgresql://profitmap_user:XXYQDyPg8AwCH7C9YDLQrpJ0btH1cfqQ@dpg-csm2lcogph6c73abtdm0-a:5432/profitmap`;
+    `postgresql://profitmap_user:password@hostname:5432/profitmap`;
 
 const pool = new Pool({
     connectionString,
     ssl: {
-        rejectUnauthorized: false, // Need for Render
+        rejectUnauthorized: false, // Needed for Render
     },
 });
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'build')));
 
 // Test connection to the database
 app.get('/test-db', async (req, res) => {
@@ -30,7 +34,6 @@ app.get('/test-db', async (req, res) => {
         client.release();
 
         const centralTime = moment(result.rows[0].now).tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss');
-
         res.send(`Database is connected. Central Time: ${centralTime}`);
     } catch (err) {
         console.error(err);
@@ -38,9 +41,9 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
-// Example placeholder for a main route
-app.get('/', (req, res) => {
-    res.send('Welcome to the Profit Map Web App Backend!');
+// Catch-all handler for any other requests (serves the React app)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 app.listen(port, () => {
