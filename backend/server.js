@@ -6,6 +6,7 @@ const cors = require('cors');
 const moment = require('moment-timezone');
 const multer = require('multer');
 const fs = require('fs');
+const path = require('path');
 const csv = require('csv-parser');
 
 const app = express();
@@ -35,7 +36,6 @@ app.get('/test-db', async (req, res) => {
         client.release();
 
         const centralTime = moment(result.rows[0].now).tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss');
-
         res.send(`Database is connected. Central Time: ${centralTime}`);
     } catch (err) {
         console.error(err);
@@ -43,34 +43,56 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
-// File upload route to handle CSV files
-app.post('/upload', upload.single('file'), (req, res) => {
+// File upload route to handle CSV files uploaded by users
+app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).send('No file uploaded.');
     }
 
     const filePath = req.file.path;
-
-    // Create a stream to read the CSV file
     const results = [];
-    fs.createReadStream(filePath)
-        .pipe(csv())
-        .on('data', (data) => results.push(data))
-        .on('end', () => {
-            // Log the results to verify the parsed data
-            console.log('CSV File Parsed Successfully:');
-            console.log(results);
 
-            // Add additional logic to validate CSV data - specifically fields we want
-            res.send('CSV file uploaded and parsed successfully');
-        })
-        .on('error', (err) => {
-            console.error('Error reading CSV file:', err);
-            res.status(500).send('Failed to read and parse CSV file');
+    // Read and parse the uploaded CSV file
+    try {
+        await new Promise((resolve, reject) => {
+            fs.createReadStream(filePath)
+                .pipe(csv())
+                .on('data', (data) => results.push(data))
+                .on('end', resolve)
+                .on('error', reject);
         });
+
+        console.log('CSV File Parsed Successfully:', results);
+
+        // Insert parsed data into the database
+        const client = await pool.connect();
+        try {
+            for (const row of results) {
+                const { field_name, yield_data } = row;
+                await client.query(
+                    'INSERT INTO fields (field_name) VALUES ($1) ON CONFLICT (field_name) DO NOTHING',
+                    [field_name]
+                );
+                await client.query(
+                    'INSERT INTO yield_data (field_name, yield_data) VALUES ($1, $2)',
+                    [field_name, yield_data]
+                );
+            }
+            res.send('CSV file uploaded and data inserted successfully');
+        } catch (error) {
+            console.error('Error inserting data:', error);
+            res.status(500).send('Error inserting data into the database');
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error('Error reading CSV file:', err);
+        res.status(500).send('Failed to read and parse CSV file');
+    } finally {
+        // Remove the temporary file after processing
+        fs.unlink(filePath, (err) => {
+            if (err) console.error('Error deleting uploaded file:', err);
+        });
+    }
 });
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
