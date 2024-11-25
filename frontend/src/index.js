@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-import 'Yield_H-3.csv';
+
 
 
 
@@ -15,7 +15,7 @@ root.render(
 );
 
 let rentCost = 0; // Waiting for field names for dynamic changes
-let fertillizerCost = 0; // Waiting for field names for dynamic changes
+let fertilizerCost = 0; // Waiting for field names for dynamic changes
 let seedCost = 0; // Waiting for field names for dynamic changes
 let maintenanceCost = 0; // Waiting for field names for dynamic changes
 let miscCost = 0; // Waiting for field names for dynamic changes
@@ -23,11 +23,15 @@ let miscCost = 0; // Waiting for field names for dynamic changes
 let pricePerBushelCorn = 0; // Waiting for field names for dynamic changes
 let pricePerBushelSoybeans = 0; // Waiting for field names for dynamic changes
 
+let yieldPerAcreCorn = 0; // Waiting for field names for dynamic changes
+let yieldPerAcreSoybeans = 0; // Waiting for field names for dynamic changes
+
 
 // Change this to Price per acre
 // To how much corn will cost and make for money
 // Current yield * price of ___, subtract other expenses
-let totalCosts = rentCost + fertillizerCost + seedCost + maintenanceCost + miscCost;
+let totalCosts = rentCost + fertilizerCost + seedCost + maintenanceCost + miscCost;
+
 let profitPerAcreCorn = (yieldPerAcreCorn * pricePerBushelCorn) - totalCosts;
 let profitPerAcreSoybeans = (yieldPerAcreSoybeans * pricePerBushelSoybeans) - totalCosts;
 

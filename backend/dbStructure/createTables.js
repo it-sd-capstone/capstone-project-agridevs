@@ -11,13 +11,16 @@ const createFieldTable = `
 `;
 const createUserTable = `
     CREATE TABLE IF NOT EXISTS users (
-        userId INTEGER PRIMARY KEY NOT NULL,
+        userId SERIAL PRIMARY KEY,  
         firstName VARCHAR(25) NOT NULL,
         lastName VARCHAR(50) NOT NULL,
         nameOfFarm VARCHAR(50),
         fieldId INTEGER NOT NULL,
         CONSTRAINT fk_field FOREIGN KEY (fieldId) REFERENCES field(fieldId)
-    );
+        );
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS userName VARCHAR(50) NOT NULL;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(100) NOT NULL;
 `;
 
 const createCostTable = `

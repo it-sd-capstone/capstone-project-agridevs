@@ -8,6 +8,8 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
+const bcrypt = require('bcrypt');
+const {router} = require("express/lib/application.js");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -42,6 +44,31 @@ app.get('/test-db', async (req, res) => {
         res.status(500).send('Database connection failed');
     }
 });
+
+router.post('/register', async (req, res) => {
+    const { userName, password, firstName, lastName, nameOfFarm, fieldId } = req.body;
+
+    try {
+        // Hash the password before storing it
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert user data into the users table
+        const query = `
+            INSERT INTO users (firstName, lastName, nameOfFarm, fieldId, userName, password)
+            VALUES ($1, $2, $3, $4, $5, $6)
+        `;
+        const values = [firstName, lastName, nameOfFarm, fieldId, userName, hashedPassword];
+
+        await pool.query(query, values);
+
+        res.status(201).json({ message: 'Account created successfully!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Something went wrong, please try again later' });
+    }
+});
+
+module.exports = router;
 
 // File upload route to handle CSV files uploaded by users
 app.post('/upload', upload.single('file'), async (req, res) => {
