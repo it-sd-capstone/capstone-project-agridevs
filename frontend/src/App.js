@@ -1,6 +1,6 @@
 import './App.css';
 import TestComponent from './TestComponent';
-import CSVUpload from "./CSVUploadComponent";
+import CSVUploadComponent from "./CSVUploadComponent";
 
 function App() {
   return (
