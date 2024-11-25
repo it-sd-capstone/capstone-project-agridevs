@@ -81,34 +81,33 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         return res.status(400).send('No file uploaded.');
     }
 
-    const filePath = req.file.path;
+    // Define the path to the uploads directory
+    const uploadsDirectory = path.join(__dirname, 'uploads');
+    const uploadedFileName = req.file.filename;
+    const filePath = path.join(uploadsDirectory, uploadedFileName);
+
     const results = [];
 
-    // Validate the uploaded CSV file structure
-    const requiredColumns = ['field_name', 'longitude', 'latitude', 'yield_value'];
-    let isValid = true;
+    // Debugging: Log the uploaded file path
+    console.log('Uploaded file path:', filePath);
 
+    // Move the file to uploads directory
     try {
-        // Read and validate the CSV file
+        if (!fs.existsSync(uploadsDirectory)) {
+            fs.mkdirSync(uploadsDirectory); // Create directory if it doesn't exist
+        }
+
+        // Move the file to uploads
+        fs.renameSync(req.file.path, filePath);
+
+        // Read and parse the CSV file
         await new Promise((resolve, reject) => {
             fs.createReadStream(filePath)
                 .pipe(csv())
-                .on('headers', (headers) => {
-                    // Check if all required columns are present
-                    const missingColumns = requiredColumns.filter(column => !headers.includes(column));
-                    if (missingColumns.length > 0) {
-                        isValid = false;
-                        reject(new Error(`Missing required columns: ${missingColumns.join(', ')}`));
-                    }
-                })
                 .on('data', (data) => results.push(data))
                 .on('end', resolve)
                 .on('error', reject);
         });
-
-        if (!isValid) {
-            return res.status(400).send('Invalid CSV format. Please include all required columns.');
-        }
 
         console.log('CSV File Parsed Successfully:', results);
 
@@ -144,13 +143,18 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         }
     } catch (err) {
         console.error('Error handling file:', err);
-        res.status(400).send(`Failed to handle uploaded file: ${err.message}`);
+        res.status(500).send('Failed to handle uploaded file');
     } finally {
-        // Remove the temporary file after processing
+        // Optional: Remove the temporary file from uploads after processing
         fs.unlink(filePath, (err) => {
             if (err) console.error('Error deleting uploaded file:', err);
         });
     }
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+    res.send('Welcome to the Profit Map Web App!');
 });
 
 // Start the server
