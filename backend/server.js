@@ -22,7 +22,7 @@ const connectionString =
 const pool = new Pool({
     connectionString,
     ssl: {
-        rejectUnauthorized: false, // Need for Render
+        rejectUnauthorized: false, // Needed for Render
     },
 });
 
@@ -43,17 +43,64 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
+// Endpoint to create database tables
+app.get('/create-tables', async (req, res) => {
+    const createFieldsTable = `
+        CREATE TABLE IF NOT EXISTS fields (
+            id SERIAL PRIMARY KEY,
+            field_name VARCHAR(255) NOT NULL UNIQUE,
+            longitude FLOAT,
+            latitude FLOAT
+        );
+    `;
+
+    const createYieldDataTable = `
+        CREATE TABLE IF NOT EXISTS yield_data (
+            id SERIAL PRIMARY KEY,
+            field_id INT NOT NULL,
+            yield_value FLOAT NOT NULL,
+            FOREIGN KEY (field_id) REFERENCES fields (id)
+        );
+    `;
+
+    try {
+        const client = await pool.connect();
+        await client.query(createFieldsTable);
+        await client.query(createYieldDataTable);
+        client.release();
+        res.send('Tables created successfully');
+    } catch (err) {
+        console.error('Error creating tables:', err);
+        res.status(500).send('Failed to create tables');
+    }
+});
+
 // File upload route to handle CSV files uploaded by users
 app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).send('No file uploaded.');
     }
 
-    const filePath = req.file.path;
+    // Define the path to the ExFarmData directory
+    const exFarmDataDirectory = path.join(__dirname, 'ExFarmData');
+    const uploadedFileName = req.file.filename;
+    const filePath = path.join(exFarmDataDirectory, uploadedFileName);
+
     const results = [];
 
-    // Read and parse the uploaded CSV file
+    // Debugging: Log the uploaded file path
+    console.log('Uploaded file path:', filePath);
+
+    // Move the file to ExFarmData directory
     try {
+        if (!fs.existsSync(exFarmDataDirectory)) {
+            fs.mkdirSync(exFarmDataDirectory); // Create directory if it doesn't exist
+        }
+
+        // Move the file to ExFarmData
+        fs.renameSync(req.file.path, filePath);
+
+        // Read and parse the CSV file
         await new Promise((resolve, reject) => {
             fs.createReadStream(filePath)
                 .pipe(csv())
@@ -68,14 +115,23 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         const client = await pool.connect();
         try {
             for (const row of results) {
-                const { field_name, yield_data } = row;
-                await client.query(
-                    'INSERT INTO fields (field_name) VALUES ($1) ON CONFLICT (field_name) DO NOTHING',
-                    [field_name]
+                const { field_name, longitude, latitude, yield_value } = row;
+
+                // Insert into `fields` table or update existing record
+                const fieldResult = await client.query(
+                    `INSERT INTO fields (field_name, longitude, latitude) 
+                     VALUES ($1, $2, $3) 
+                     ON CONFLICT (field_name) 
+                     DO UPDATE SET longitude = EXCLUDED.longitude, latitude = EXCLUDED.latitude 
+                     RETURNING id`,
+                    [field_name, longitude, latitude]
                 );
+                const fieldId = fieldResult.rows[0].id;
+
+                // Insert into `yield_data` table with the `field_id`
                 await client.query(
-                    'INSERT INTO yield_data (field_name, yield_data) VALUES ($1, $2)',
-                    [field_name, yield_data]
+                    'INSERT INTO yield_data (field_id, yield_value) VALUES ($1, $2)',
+                    [fieldId, yield_value]
                 );
             }
             res.send('CSV file uploaded and data inserted successfully');
@@ -86,13 +142,18 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             client.release();
         }
     } catch (err) {
-        console.error('Error reading CSV file:', err);
-        res.status(500).send('Failed to read and parse CSV file');
+        console.error('Error handling file:', err);
+        res.status(500).send('Failed to handle uploaded file');
     } finally {
-        // Remove the temporary file after processing
+        // Optional: Remove the temporary file from ExFarmData after processing
         fs.unlink(filePath, (err) => {
             if (err) console.error('Error deleting uploaded file:', err);
         });
     }
 });
 
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
