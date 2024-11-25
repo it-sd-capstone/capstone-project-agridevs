@@ -47,20 +47,20 @@ app.get('/test-db', async (req, res) => {
 app.get('/create-tables', async (req, res) => {
     const createFieldsTable = `
         CREATE TABLE IF NOT EXISTS fields (
-            id SERIAL PRIMARY KEY,
-            field_name VARCHAR(255) NOT NULL UNIQUE,
+                                              id SERIAL PRIMARY KEY,
+                                              field_name VARCHAR(255) NOT NULL UNIQUE,
             longitude FLOAT,
             latitude FLOAT
-        );
+            );
     `;
 
     const createYieldDataTable = `
         CREATE TABLE IF NOT EXISTS yield_data (
-            id SERIAL PRIMARY KEY,
-            field_id INT NOT NULL,
-            yield_value FLOAT NOT NULL,
-            FOREIGN KEY (field_id) REFERENCES fields (id)
-        );
+                                                  id SERIAL PRIMARY KEY,
+                                                  field_id INT NOT NULL,
+                                                  yield_value FLOAT NOT NULL,
+                                                  FOREIGN KEY (field_id) REFERENCES fields (id)
+            );
     `;
 
     try {
@@ -81,33 +81,34 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         return res.status(400).send('No file uploaded.');
     }
 
-    // Define the path to the ExFarmData directory
-    const exFarmDataDirectory = path.join(__dirname, 'ExFarmData');
-    const uploadedFileName = req.file.filename;
-    const filePath = path.join(exFarmDataDirectory, uploadedFileName);
-
+    const filePath = req.file.path;
     const results = [];
 
-    // Debugging: Log the uploaded file path
-    console.log('Uploaded file path:', filePath);
+    // Validate the uploaded CSV file structure
+    const requiredColumns = ['field_name', 'longitude', 'latitude', 'yield_value'];
+    let isValid = true;
 
-    // Move the file to ExFarmData directory
     try {
-        if (!fs.existsSync(exFarmDataDirectory)) {
-            fs.mkdirSync(exFarmDataDirectory); // Create directory if it doesn't exist
-        }
-
-        // Move the file to ExFarmData
-        fs.renameSync(req.file.path, filePath);
-
-        // Read and parse the CSV file
+        // Read and validate the CSV file
         await new Promise((resolve, reject) => {
             fs.createReadStream(filePath)
                 .pipe(csv())
+                .on('headers', (headers) => {
+                    // Check if all required columns are present
+                    const missingColumns = requiredColumns.filter(column => !headers.includes(column));
+                    if (missingColumns.length > 0) {
+                        isValid = false;
+                        reject(new Error(`Missing required columns: ${missingColumns.join(', ')}`));
+                    }
+                })
                 .on('data', (data) => results.push(data))
                 .on('end', resolve)
                 .on('error', reject);
         });
+
+        if (!isValid) {
+            return res.status(400).send('Invalid CSV format. Please include all required columns.');
+        }
 
         console.log('CSV File Parsed Successfully:', results);
 
@@ -119,11 +120,11 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
                 // Insert into `fields` table or update existing record
                 const fieldResult = await client.query(
-                    `INSERT INTO fields (field_name, longitude, latitude) 
-                     VALUES ($1, $2, $3) 
-                     ON CONFLICT (field_name) 
-                     DO UPDATE SET longitude = EXCLUDED.longitude, latitude = EXCLUDED.latitude 
-                     RETURNING id`,
+                    `INSERT INTO fields (field_name, longitude, latitude)
+                     VALUES ($1, $2, $3)
+                         ON CONFLICT (field_name) 
+                     DO UPDATE SET longitude = EXCLUDED.longitude, latitude = EXCLUDED.latitude
+                                                     RETURNING id`,
                     [field_name, longitude, latitude]
                 );
                 const fieldId = fieldResult.rows[0].id;
@@ -143,15 +144,14 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         }
     } catch (err) {
         console.error('Error handling file:', err);
-        res.status(500).send('Failed to handle uploaded file');
+        res.status(400).send(`Failed to handle uploaded file: ${err.message}`);
     } finally {
-        // Optional: Remove the temporary file from ExFarmData after processing
+        // Remove the temporary file after processing
         fs.unlink(filePath, (err) => {
             if (err) console.error('Error deleting uploaded file:', err);
         });
     }
 });
-
 
 // Start the server
 app.listen(port, () => {
