@@ -23,6 +23,9 @@
 // let pricePerBushelCorn = 0; // Waiting for field names for dynamic changes
 // let pricePerBushelSoybeans = 0; // Waiting for field names for dynamic changes
 
+// let yieldPerAcreCorn = 0; // Waiting for field names for dynamic changes
+// let yieldPerAcreSoybeans = 0; // Waiting for field names for dynamic changes
+
 
 // Change this to Price per acre
 // To how much corn will cost and make for money
@@ -55,7 +58,7 @@
 
 //         gradientColor = '(255, 0, 0)';
 
-//     } else if (gradientValue >= 161.88 && gradientColor <= 191.50) {
+    } else if (gradientValue >= 161.88 && gradientColor <= 191.50) {
 
 //         gradientColor = '(240, 47, 0)';
 

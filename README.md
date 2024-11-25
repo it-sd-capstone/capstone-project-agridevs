@@ -1,6 +1,6 @@
-# Profit Map Web App
+# Profit Map Web Home
 ## Overview
-The Profit Map Web App aims to help farmers visualize profitability using yield data mapped onto satellite imagery.
+The Profit Map Web Home aims to help farmers visualize profitability using yield data mapped onto satellite imagery.
 Users can upload CSV files, which are then processed to generate a map with an overlaid color gradient.
 
 ## To-Do List
@@ -16,7 +16,7 @@ Users can upload CSV files, which are then processed to generate a map with an o
 https://capstone-project-agridevs.onrender.com/
 
 ## Installation Commands
-### Repository
+### Repository****
 - Clone with HTTPS
 - git clone https://github.com/it-sd-capstone/capstone-project-agridevs.git
 
@@ -50,7 +50,7 @@ https://capstone-project-agridevs.onrender.com/
     - "homepage": "https://capstone-project-agridevs.onrender.com",
 
 ## Validation
-The Profit Map Web App has both frontend and backend components deployed publicly at the link noted above (Render). 
+The Profit Map Web Home has both frontend and backend components deployed publicly at the link noted above (Render). 
 To verify the connection between the backend and the frontend, navigate to the link and click the "Test Backend 
 Connection" button. On our end of things, once the button is clicked, the fetch command in our TestComponent.js 
 (frontend) to receive the GET request. This then matches the route defined in our server.js (backend) and begins to
