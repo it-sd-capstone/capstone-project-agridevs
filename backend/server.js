@@ -28,6 +28,8 @@ const pool = new Pool({
 
 const upload = multer({ dest: 'uploads/' });
 
+app.use(express.static(path.join(__dirname, 'build')));
+
 // Test connection to the database
 app.get('/test-db', async (req, res) => {
     try {
@@ -153,8 +155,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 });
 
 // Root endpoint
-app.get('/', (req, res) => {
-    res.send('Welcome to the Profit Map Web App!');
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 // Start the server
