@@ -1,1 +1,74 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><link rel="icon" href="/favicon.ico"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#000000"/><meta name="description" content="Web site created using create-react-app"/><link rel="apple-touch-icon" href="/logo192.png"/><link rel="manifest" href="/manifest.json"/><title>React Home</title><script defer="defer" src="/static/js/main.7df945b2.js"></script><link href="/static/css/main.a04b40ee.css" rel="stylesheet"></head><body><noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <link rel="icon" href="/favicon.ico"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="theme-color" content="#000000"/>
+    <meta name="description" content="Web site created using create-react-app"/>
+    <link rel="apple-touch-icon" href="/logo192.png"/>
+    <link rel="manifest" href="/manifest.json"/><title>Backend React Home</title>
+    <script defer="defer" src="/static/js/main.7df945b2.js"></script>
+    <link href="/static/css/main.a04b40ee.css" rel="stylesheet">
+    <link href="frontend/src/index.js" rel="JavaScript">
+    <link href="frontend/src/Home.js" rel="JavaScript">
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root">
+
+    </div>
+    <div class="container">
+      <h1>Profit Map Web App</h1>
+      
+      <div class="form-section">
+        <!-- Yield Map Part -->
+        <div class="upload-area">
+          <h2>Upload Yield Map</h2>
+          <div class="upload-placeholder">
+            Drag and Drop File Here<br>
+            <button>Click to Upload</button>
+          </div>
+          <p>Acceptable formats are ...</p>
+        </div>
+  
+        <!-- Input Fields Part -->
+        <div class="input-fields">
+          <label>Rent Cost (per acre):</label>
+          <input type="number" id="rent-cost" placeholder="Enter rent cost">
+          
+          <label>Fertilizer Cost:</label>
+          <input type="number" id="fertilizer-cost" placeholder="Enter fertilizer cost">
+          
+          <label>Seed Cost:</label>
+          <input type="number" id="seed-cost" placeholder="Enter seed cost">
+          
+          <label>Maintenance Cost (spread across field):</label>
+          <input type="number" id="maintenance-cost" placeholder="Enter maintenance cost">
+          
+          <label>Miscellaneous Cost:</label>
+          <input type="number" id="misc-cost" placeholder="Enter misc. cost">
+          
+          <label>Price per Bushel (Corn / Soybeans):</label>
+          <input type="number" id="price-bushel" placeholder="Enter price per bushel">
+        </div>
+      </div>
+  
+      <!-- Action Buttons -->
+      <div class="buttons">
+        <button id="update-btn">Update</button>
+        <button id="generate-btn">Generate</button>
+      </div>
+  
+      <!-- Profit Map Section -->
+      <div class="profit-map">
+        <h2>Profit Map</h2>
+        <div class="map-placeholder">
+          <!-- Placeholder for the generated profit map -->
+        </div>
+      </div>
+    </div>
+  
+    <script src="Home.js"></script>
+  </body>
+</html>
