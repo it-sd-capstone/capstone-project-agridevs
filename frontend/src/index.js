@@ -13,8 +13,8 @@ root.render(
   </React.StrictMode>
 );
 
-let rentCost = 0; // Waiting for field names for dynamic changes
-let fertillizerCost = 0; // Waiting for field names for dynamic changes
+let rent = 0; // Waiting for field names for dynamic changes
+let fertilizerCost = 0; // Waiting for field names for dynamic changes
 let seedCost = 0; // Waiting for field names for dynamic changes
 let maintenanceCost = 0; // Waiting for field names for dynamic changes
 let miscCost = 0; // Waiting for field names for dynamic changes
@@ -26,7 +26,7 @@ let pricePerBushelSoybeans = 0; // Waiting for field names for dynamic changes
 // Change this to Price per acre
 // To how much corn will cost and make for money
 // Current yield * price of ___, subtract other expenses
-let totalCosts = rentCost + fertillizerCost + seedCost + maintenanceCost + miscCost;
+let totalCosts = rent + fertilizerCost + seedCost + maintenanceCost + miscCost;
 // let profitPerAcreCorn = (yieldPerAcreCorn * pricePerBushelCorn) - totalCosts;
 // let profitPerAcreSoybeans = (yieldPerAcreSoybeans * pricePerBushelSoybeans) - totalCosts;
 
