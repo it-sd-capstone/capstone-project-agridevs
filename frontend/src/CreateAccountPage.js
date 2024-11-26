@@ -53,7 +53,7 @@ function CreateAccountPage() {
         };
 
         try {
-            const response = await fetch('http://localhost:3000/register', {
+            const response = await fetch('https://capstone-project-agridevs.onrender.com/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
