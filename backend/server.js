@@ -9,11 +9,13 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
 const bcrypt = require('bcrypt');
-const {router} = require("express/lib/application.js");
+const router = express.Router();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(express.json());
+app.use(router);
 app.use(cors());
 
 // Setup PostgreSQL connection using DATABASE_URL from environment variables
