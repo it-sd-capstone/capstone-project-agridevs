@@ -4,6 +4,7 @@ import './Home.css';
 
 // Import any additional components
 import TestComponent from './TestComponent';
+import CSVUploadComponent from "./CSVUploadComponent";
 
 function Home() {
     return (
@@ -11,6 +12,7 @@ function Home() {
             <header className="App-header">
                 <h1>Profit Maps</h1>
                 <TestComponent />
+                <CSVUploadComponent />
             </header>
             <nav>
                 <ul>
