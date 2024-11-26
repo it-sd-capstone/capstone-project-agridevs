@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-import 'Yield_H-3.csv';
 
 
 
@@ -28,16 +27,16 @@ let pricePerBushelSoybeans = 0; // Waiting for field names for dynamic changes
 // To how much corn will cost and make for money
 // Current yield * price of ___, subtract other expenses
 let totalCosts = rentCost + fertillizerCost + seedCost + maintenanceCost + miscCost;
-let profitPerAcreCorn = (yieldPerAcreCorn * pricePerBushelCorn) - totalCosts;
-let profitPerAcreSoybeans = (yieldPerAcreSoybeans * pricePerBushelSoybeans) - totalCosts;
+// let profitPerAcreCorn = (yieldPerAcreCorn * pricePerBushelCorn) - totalCosts;
+// let profitPerAcreSoybeans = (yieldPerAcreSoybeans * pricePerBushelSoybeans) - totalCosts;
 
 let cropType = "";
 let gradientColor;
 
 if (cropType === "corn") {
-    gradientColor = profitPerAcreCorn;
+//     gradientColor = profitPerAcreCorn;
 } else if (cropType === "soybeans") {
-    gradientColor = profitPerAcreSoybeans;
+//     gradientColor = profitPerAcreSoybeans;
 } else {
     console.error("Invalid crop type");
     gradientColor = null; // Default to null or a safe value
