@@ -1,2 +1,126 @@
 body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif;margin:0}code{font-family:source-code-pro,Menlo,Monaco,Consolas,Courier New,monospace}.App{text-align:center}.App-logo{height:40vmin;pointer-events:none}@media (prefers-reduced-motion:no-preference){.App-logo{animation:App-logo-spin 20s linear infinite}}.App-header{align-items:center;background-color:#282c34;color:#fff;display:flex;flex-direction:column;font-size:calc(10px + 2vmin);justify-content:center;min-height:10vh}.App-link{color:#61dafb}@keyframes App-logo-spin{0%{transform:rotate(0deg)}to{transform:rotate(1turn)}}h2{display:block;text-align:center}form{display:flex;flex-direction:column;margin:0 auto;max-width:300px;padding:20px}div{margin-bottom:15px}label{margin-bottom:5px}input{font-size:14px;padding:8px;width:100%}
+/*# sourceMappingURL=main.a04b40ee.css.map*/body {
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif;
+  margin:0
+}
+code {
+  font-family:source-code-pro,Menlo,Monaco,Consolas,Courier New,monospace
+}
+.App {
+  text-align:center
+}
+.App-logo {
+  height:40vmin;pointer-events:none
+}
+    @media (prefers-reduced-motion:no-preference)
+    {
+.App-logo{
+  animation:App-logo-spin 20s linear infinite}
+}
+.App-header {
+  align-items:center;background-color:#282c34;color:#fff;display:flex;flex-direction:column;font-size:calc(10px + 2vmin);justify-content:center;min-height:10vh
+}
+.App-link {
+  color:#61dafb
+}
+@keyframes App-logo-spin{
+  0%{transform:rotate(0deg)}to{transform:rotate(1turn)}
+}
+h2 {
+  display:block;text-align:center
+}
+form {
+  display:flex;flex-direction:column;margin:0 auto;max-width:300px;padding:20px
+}
+div {
+  margin-bottom:15px
+}
+label {
+  margin-bottom:5px
+}
+input {
+  font-size:14px;padding:8px;width:100%
+}
+
 /*# sourceMappingURL=main.a04b40ee.css.map*/
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+.form-section {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.upload-area {
+  width: 40%;
+  background-color: #ddd;
+  padding: 20px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.upload-placeholder {
+  border: 2px dashed #bbb;
+  padding: 30px;
+  margin-bottom: 10px;
+}
+
+.input-fields {
+  width: 55%;
+  text-align: left;
+}
+
+.input-fields label {
+  display: block;
+  margin: 10px 0 5px;
+  font-weight: bold;
+}
+
+.input-fields input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.buttons {
+  margin-bottom: 20px;
+}
+
+.buttons button {
+  padding: 10px 20px;
+  margin: 0 10px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+}
+
+.buttons button#update-btn {
+  background-color: #007bff;
+}
+
+.profit-map {
+  background-color: #eee;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+.map-placeholder {
+  height: 200px;
+  border: 2px solid #ccc;
+  background-color: #fff;
+}
