@@ -1,18 +1,18 @@
-// import React from 'react';
-// import ReactDOM from 'react-dom/client';
+ import React from 'react';
+ import ReactDOM from 'react-dom/client';
 // import './index.css';
-// import App from './App';
+ import App from './App';
 // import reportWebVitals from './reportWebVitals';
 // import 'Yield_H-3.csv';
 
 
 
-// const root = ReactDOM.createRoot(document.getElementById('root'));
-// root.render(
-//   <React.StrictMode>
-//     <App />
-//   </React.StrictMode>
-// );
+ const root = ReactDOM.createRoot(document.getElementById('root'));
+ root.render(
+ <React.StrictMode>
+   <App />
+   </React.StrictMode>
+ );
 
 // let rentCost = 0; // Waiting for field names for dynamic changes
 // let fertillizerCost = 0; // Waiting for field names for dynamic changes
@@ -58,7 +58,7 @@
 
 //         gradientColor = '(255, 0, 0)';
 
-    } else if (gradientValue >= 161.88 && gradientColor <= 191.50) {
+ //   } else if (gradientValue >= 161.88 && gradientColor <= 191.50) {
 
 //         gradientColor = '(240, 47, 0)';
 

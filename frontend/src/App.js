@@ -2,7 +2,7 @@ import React, {useEffect} from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './Home'; // Make sure the import is correct
 import CreateAccountPage from './CreateAccountPage'; // Correct the path and component name
-import './App.css';
+//import './App.css';
 import TestComponent from './TestComponent';
 import CSVUploadComponent from './CSVUploadComponent';
 
