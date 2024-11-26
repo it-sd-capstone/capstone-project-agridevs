@@ -1,27 +1,26 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './Home';
+import CreateAccountPage from './CreateAccountPage';
 import './Home.css';
-
-// Import any additional components
 import TestComponent from './TestComponent';
-import CSVUploadComponent from "./CSVUploadComponent";
+import CSVUploadComponent from './CSVUploadComponent';
 
-function Home() {
+function App() {
     return (
-        <div className="App">
-            <header className="App-header">
-                <h1>Profit Maps</h1>
+        <Router>
+            <Routes>
+                <Route path="/home" element={<Home />} />
+                <Route path="/createaccountpage" element={<CreateAccountPage />} />
+            </Routes>
+            <div>
                 <TestComponent />
+            </div>
+            <div>
                 <CSVUploadComponent />
-            </header>
-            <nav>
-                <ul>
-                    <li><Link to="/Home">Home Page</Link></li>
-                    <li><Link to="/CreateAccountPage">Create Account</Link></li>
-                </ul>
-            </nav>
-        </div>
+            </div>
+        </Router>
     );
 }
 
-export default Home;
+export default App;
