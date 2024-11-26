@@ -23,4 +23,15 @@ function App() {
     );
 }
 
+document.getElementById("update-btn").addEventListener("click", () => {
+    // Placeholder for Update functionality
+    alert("Update button clicked! Implement logic here.");
+  });
+  
+  document.getElementById("generate-btn").addEventListener("click", () => {
+    // Placeholder for Generate functionality
+    alert("Generate button clicked! Implement logic here.");
+  });
+
+
 export default App;
