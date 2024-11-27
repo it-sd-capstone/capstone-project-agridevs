@@ -112,23 +112,18 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         return res.status(400).send('No file uploaded.');
     }
 
-    // Define the path to the uploads directory
     const uploadsDirectory = path.join(__dirname, 'uploads');
     const uploadedFileName = req.file.filename;
     const filePath = path.join(uploadsDirectory, uploadedFileName);
 
     const results = [];
 
-    // Debugging: Log the uploaded file path
-    console.log('Uploaded file path:', filePath);
-
-    // Move the file to uploads directory
     try {
         if (!fs.existsSync(uploadsDirectory)) {
-            fs.mkdirSync(uploadsDirectory); // Create directory if it doesn't exist
+            fs.mkdirSync(uploadsDirectory);
         }
 
-        // Move the file to uploads
+        // Move the file to the uploads directory
         fs.renameSync(req.file.path, filePath);
 
         // Read and parse the CSV file
@@ -146,23 +141,52 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         const client = await pool.connect();
         try {
             for (const row of results) {
-                const { field_name, longitude, latitude, yield_value } = row;
+                // Map CSV columns to variables
+                const fieldName = row['Field'];
+                const location = 'Unknown'; // Provide a default value or adjust as needed
+                const area = 0.0; // Provide a default value or calculate if possible
+                const yieldValue = parseFloat(row['Yld Mass(Dry)(lb/ac)']);
+                const year = new Date(row['Date']).getFullYear();
+                const cropType = row['Product'];
 
-                // Insert into `fields` table or update existing record
+                // Validate data
+                if (
+                    !fieldName ||
+                    isNaN(yieldValue) ||
+                    !cropType ||
+                    isNaN(year)
+                ) {
+                    console.error('Invalid data in row:', row);
+                    continue; // Skip this row
+                }
+
+                // Insert into `field` table
                 const fieldResult = await client.query(
-                    `INSERT INTO fields (field_name, longitude, latitude)
-                     VALUES ($1, $2, $3)
-                         ON CONFLICT (field_name) 
-                     DO UPDATE SET longitude = EXCLUDED.longitude, latitude = EXCLUDED.latitude
-                                                     RETURNING id`,
-                    [field_name, longitude, latitude]
+                    `INSERT INTO field (fieldName, location, area)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (fieldName)
+           DO NOTHING
+           RETURNING fieldId`,
+                    [fieldName, location, area]
                 );
-                const fieldId = fieldResult.rows[0].id;
 
-                // Insert into `yield_data` table with the `field_id`
+                let fieldId;
+                if (fieldResult.rows.length > 0) {
+                    fieldId = fieldResult.rows[0].fieldid;
+                } else {
+                    // If the field already exists, retrieve its fieldId
+                    const existingField = await client.query(
+                        `SELECT fieldId FROM field WHERE fieldName = $1`,
+                        [fieldName]
+                    );
+                    fieldId = existingField.rows[0].fieldid;
+                }
+
+                // Insert into `yieldData` table
                 await client.query(
-                    'INSERT INTO yield_data (field_id, yield_value) VALUES ($1, $2)',
-                    [fieldId, yield_value]
+                    `INSERT INTO yieldData (yieldId, yieldData, yieldValue, year, cropType, fieldId)
+           VALUES (DEFAULT, $1, $2, $3, $4, $5)`,
+                    [0, yieldValue, yieldValue, year, cropType, fieldId]
                 );
             }
             res.send('CSV file uploaded and data inserted successfully');
@@ -182,6 +206,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         });
     }
 });
+
 
 // Root endpoint
 app.get('*', (req, res) => {
