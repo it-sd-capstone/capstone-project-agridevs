@@ -7,7 +7,7 @@ function CreateAccountPage() {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
-        username: '',
+        userName: '',
         password: '',
         confirmPassword: '',
         nameOfFarm: '',
@@ -31,7 +31,7 @@ function CreateAccountPage() {
 
         let firstName = formData.firstName;
         let lastName = formData.lastName;
-        let username = formData.username;
+        let userName = formData.userName;
         let password = formData.password;
         let confirmPassword = formData.confirmPassword;
         let nameOfFarm = formData.nameOfFarm;
@@ -46,7 +46,7 @@ function CreateAccountPage() {
         const userData = {
             firstName,
             lastName,
-            username,
+            userName,
             password,
             nameOfFarm,
             fieldId,
@@ -105,8 +105,8 @@ function CreateAccountPage() {
                     <label>Username:</label>
                     <input
                         type="text"
-                        name="username"
-                        value={formData.username}
+                        name="userName"
+                        value={formData.userName}
                         onChange={handleChange}
                         required
                     />
