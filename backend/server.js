@@ -163,8 +163,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
                 // Insert into `field` table
                 const fieldResult = await client.query(
                     `INSERT INTO field (fieldName, location, area)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (fieldName)
+                     VALUES ($1, $2, $3)
+                         ON CONFLICT (fieldName)
            DO NOTHING
            RETURNING fieldId`,
                     [fieldName, location, area]
@@ -184,9 +184,9 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
                 // Insert into `yieldData` table
                 await client.query(
-                    `INSERT INTO yieldData (yieldId, yieldData, yieldValue, year, cropType, fieldId)
-           VALUES (DEFAULT, $1, $2, $3, $4, $5)`,
-                    [0, yieldValue, yieldValue, year, cropType, fieldId]
+                    `INSERT INTO yieldData (yieldData, yieldValue, year, cropType, fieldId)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [0, yieldValue, year, cropType, fieldId]
                 );
             }
             res.send('CSV file uploaded and data inserted successfully');
