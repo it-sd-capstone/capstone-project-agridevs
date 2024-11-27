@@ -1,36 +1,15 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './Home';
-import CreateAccountPage from './CreateAccountPage';
-import './Home.css';
+import React from 'react';
 import TestComponent from './TestComponent';
 import CSVUploadComponent from './CSVUploadComponent';
 
-function App() {
+function Home() {
     return (
-        <Router>
-            <Routes>
-                <Route path="/home" element={<Home />} />
-                <Route path="/createaccountpage" element={<CreateAccountPage />} />
-            </Routes>
-            <div>
-                <TestComponent />
-            </div>
-            <div>
-                <CSVUploadComponent />
-            </div>
-        </Router>
+        <div>
+            <h1>Welcome to the Home Page</h1>
+            <TestComponent />
+            <CSVUploadComponent />
+        </div>
     );
 }
 
-document.getElementById("update-btn").addEventListener("click", () => {
-    // Placeholder for Update functionality
-    alert("Update button clicked! Implement logic here.");
-  });
-  
-  document.getElementById("generate-btn").addEventListener("click", () => {
-    // Placeholder for Generate functionality
-    alert("Generate button clicked! Implement logic here.");
-  });
-
-
-export default App;
+export default Home;
