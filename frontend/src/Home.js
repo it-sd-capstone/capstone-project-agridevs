@@ -1,13 +1,28 @@
 import React from 'react';
 import TestComponent from './TestComponent';
 import CSVUploadComponent from './CSVUploadComponent';
+import {Link} from "react-router-dom";
+import "./Home.css"
+import backgroundImage from './assets/homePageBackgroundImage.png'
 
 function Home() {
     return (
-        <div>
-            <h1>Welcome to the Home Page</h1>
-            <TestComponent />
-            <CSVUploadComponent />
+        <div  className='home-container' style={{
+                backgroundImage: `url(${backgroundImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                height: '100vh',
+
+            }}>
+            <header className="header">
+                <h1>ProfitMaps</h1>
+            </header>
+            <div>
+                <TestComponent />
+                <CSVUploadComponent />
+                <Link to="/createAccountPage" className="button">Create Account</Link>
+            </div>
         </div>
     );
 }

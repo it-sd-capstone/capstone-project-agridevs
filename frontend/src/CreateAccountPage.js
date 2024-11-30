@@ -74,9 +74,9 @@ function CreateAccountPage() {
     };
 
     return (
-        <div>
-            <div>
-                <Link to="/Home">Back to Home</Link>
+        <div className="createAccountPage-container">
+            <div className="backButton">
+                <Link to="/Home">Back</Link>
             </div>
 
             <h2>Create a New Profit Map Account</h2>

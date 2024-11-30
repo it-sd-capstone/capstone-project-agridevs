@@ -19,8 +19,8 @@ let seedCost = 0; // Waiting for field names for dynamic changes
 let maintenanceCost = 0; // Waiting for field names for dynamic changes
 let miscCost = 0; // Waiting for field names for dynamic changes
 
-let pricePerBushelCorn = 0; // Waiting for field names for dynamic changes
-let pricePerBushelSoybeans = 0; // Waiting for field names for dynamic changes
+//let pricePerBushelCorn = 0; // Waiting for field names for dynamic changes
+//let pricePerBushelSoybeans = 0; // Waiting for field names for dynamic changes
 
 
 // Change this to Price per acre
