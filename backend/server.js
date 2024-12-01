@@ -8,10 +8,14 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
+const bcrypt = require('bcrypt');
+const router = express.Router();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(express.json());
+app.use(router);
 app.use(cors());
 
 // Setup PostgreSQL connection using DATABASE_URL from environment variables
@@ -28,6 +32,57 @@ const pool = new Pool({
 
 const upload = multer({ dest: 'uploads/' });
 
+app.use(express.static(path.join(__dirname, 'build')));
+
+// NEW: Profit calculation function
+app.post('/calculate-profit', async (req, res) => {
+    const { fieldId, cropPrice, costPerUnit } = req.body;
+
+    try {
+        const client = await pool.connect();
+
+        // Query to retrieve yield data for the specified field
+        const yieldDataQuery = `
+            SELECT yield_value 
+            FROM yield_data 
+            WHERE field_id = $1
+        `;
+        const yieldDataResult = await client.query(yieldDataQuery, [fieldId]);
+
+        if (yieldDataResult.rows.length === 0) {
+            res.status(404).json({ error: 'No yield data found for the given field ID' });
+            return;
+        }
+
+        // Calculate profit for each yield entry
+        const profits = yieldDataResult.rows.map((row) => {
+            const yieldValue = row.yield_value;
+            const profit = (yieldValue * cropPrice) - costPerUnit;
+            return { yieldValue, profit };
+        });
+
+        // Insert profit results into the database
+        const insertProfitQuery = `
+            INSERT INTO profits (field_id, yield_value, profit)
+            VALUES ($1, $2, $3)
+        `;
+
+        for (const profitEntry of profits) {
+            await client.query(insertProfitQuery, [
+                fieldId,
+                profitEntry.yieldValue,
+                profitEntry.profit,
+            ]);
+        }
+
+        client.release();
+        res.status(201).json({ message: 'Profit calculated and saved successfully', profits });
+    } catch (err) {
+        console.error('Error calculating profit:', err);
+        res.status(500).json({ error: 'Failed to calculate profit' });
+    }
+});
+
 // Test connection to the database
 app.get('/test-db', async (req, res) => {
     try {
@@ -43,115 +98,10 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
-// Endpoint to create database tables
-app.get('/create-tables', async (req, res) => {
-    const createFieldsTable = `
-        CREATE TABLE IF NOT EXISTS fields (
-            id SERIAL PRIMARY KEY,
-            field_name VARCHAR(255) NOT NULL UNIQUE,
-            longitude FLOAT,
-            latitude FLOAT
-        );
-    `;
-
-    const createYieldDataTable = `
-        CREATE TABLE IF NOT EXISTS yield_data (
-            id SERIAL PRIMARY KEY,
-            field_id INT NOT NULL,
-            yield_value FLOAT NOT NULL,
-            FOREIGN KEY (field_id) REFERENCES fields (id)
-        );
-    `;
-
-    try {
-        const client = await pool.connect();
-        await client.query(createFieldsTable);
-        await client.query(createYieldDataTable);
-        client.release();
-        res.send('Tables created successfully');
-    } catch (err) {
-        console.error('Error creating tables:', err);
-        res.status(500).send('Failed to create tables');
-    }
+// Root endpoint
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
-
-// File upload route to handle CSV files uploaded by users
-app.post('/upload', upload.single('file'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).send('No file uploaded.');
-    }
-
-    // Define the path to the ExFarmData directory
-    const exFarmDataDirectory = path.join(__dirname, 'ExFarmData');
-    const uploadedFileName = req.file.filename;
-    const filePath = path.join(exFarmDataDirectory, uploadedFileName);
-
-    const results = [];
-
-    // Debugging: Log the uploaded file path
-    console.log('Uploaded file path:', filePath);
-
-    // Move the file to ExFarmData directory
-    try {
-        if (!fs.existsSync(exFarmDataDirectory)) {
-            fs.mkdirSync(exFarmDataDirectory); // Create directory if it doesn't exist
-        }
-
-        // Move the file to ExFarmData
-        fs.renameSync(req.file.path, filePath);
-
-        // Read and parse the CSV file
-        await new Promise((resolve, reject) => {
-            fs.createReadStream(filePath)
-                .pipe(csv())
-                .on('data', (data) => results.push(data))
-                .on('end', resolve)
-                .on('error', reject);
-        });
-
-        console.log('CSV File Parsed Successfully:', results);
-
-        // Insert parsed data into the database
-        const client = await pool.connect();
-        try {
-            for (const row of results) {
-                const { field_name, longitude, latitude, yield_value } = row;
-
-                // Insert into `fields` table or update existing record
-                const fieldResult = await client.query(
-                    `INSERT INTO fields (field_name, longitude, latitude) 
-                     VALUES ($1, $2, $3) 
-                     ON CONFLICT (field_name) 
-                     DO UPDATE SET longitude = EXCLUDED.longitude, latitude = EXCLUDED.latitude 
-                     RETURNING id`,
-                    [field_name, longitude, latitude]
-                );
-                const fieldId = fieldResult.rows[0].id;
-
-                // Insert into `yield_data` table with the `field_id`
-                await client.query(
-                    'INSERT INTO yield_data (field_id, yield_value) VALUES ($1, $2)',
-                    [fieldId, yield_value]
-                );
-            }
-            res.send('CSV file uploaded and data inserted successfully');
-        } catch (error) {
-            console.error('Error inserting data:', error);
-            res.status(500).send('Error inserting data into the database');
-        } finally {
-            client.release();
-        }
-    } catch (err) {
-        console.error('Error handling file:', err);
-        res.status(500).send('Failed to handle uploaded file');
-    } finally {
-        // Optional: Remove the temporary file from ExFarmData after processing
-        fs.unlink(filePath, (err) => {
-            if (err) console.error('Error deleting uploaded file:', err);
-        });
-    }
-});
-
 
 // Start the server
 app.listen(port, () => {
