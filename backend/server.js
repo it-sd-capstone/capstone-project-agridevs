@@ -34,6 +34,7 @@ const upload = multer({ dest: 'uploads/' });
 
 app.use(express.static(path.join(__dirname, 'build')));
 
+<<<<<<< HEAD
 // NEW: Profit calculation function
 app.post('/calculate-profit', async (req, res) => {
     const { fieldId, cropPrice, costPerUnit } = req.body;
@@ -83,6 +84,8 @@ app.post('/calculate-profit', async (req, res) => {
     }
 });
 
+=======
+>>>>>>> origin/main
 // Test connection to the database
 app.get('/test-db', async (req, res) => {
     try {
@@ -98,11 +101,178 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
+<<<<<<< HEAD
 // Root endpoint
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
+=======
+router.post('/register', async (req, res) => {
+    const { userName, password, firstName, lastName, nameOfFarm, fieldId } = req.body;
+
+    try {
+        // Hash the password before storing it
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert user data into the users table
+        const query = `
+            INSERT INTO users (firstName, lastName, nameOfFarm, fieldId, userName, password)
+            VALUES ($1, $2, $3, $4, $5, $6)
+        `;
+        const values = [firstName, lastName, nameOfFarm, fieldId, userName, hashedPassword];
+
+        await pool.query(query, values);
+
+        res.status(201).json({ message: 'Account created successfully!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Something went wrong, please try again later' });
+    }
+});
+
+module.exports = router;
+
+// Endpoint to create database tables
+app.get('/create-tables', async (req, res) => {
+    const createFieldsTable = `
+        CREATE TABLE IF NOT EXISTS fields (
+                                              id SERIAL PRIMARY KEY,
+                                              field_name VARCHAR(255) NOT NULL UNIQUE,
+            longitude FLOAT,
+            latitude FLOAT
+            );
+    `;
+
+    const createYieldDataTable = `
+        CREATE TABLE IF NOT EXISTS yield_data (
+                                                  id SERIAL PRIMARY KEY,
+                                                  field_id INT NOT NULL,
+                                                  yield_value FLOAT NOT NULL,
+                                                  FOREIGN KEY (field_id) REFERENCES fields (id)
+            );
+    `;
+
+    try {
+        const client = await pool.connect();
+        await client.query(createFieldsTable);
+        await client.query(createYieldDataTable);
+        client.release();
+        res.send('Tables created successfully');
+    } catch (err) {
+        console.error('Error creating tables:', err);
+        res.status(500).send('Failed to create tables');
+    }
+});
+
+// File upload route to handle CSV files uploaded by users
+app.post('/upload', upload.single('file'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No file uploaded.');
+    }
+
+    const uploadsDirectory = path.join(__dirname, 'uploads');
+    const uploadedFileName = req.file.filename;
+    const filePath = path.join(uploadsDirectory, uploadedFileName);
+
+    const results = [];
+
+    try {
+        if (!fs.existsSync(uploadsDirectory)) {
+            fs.mkdirSync(uploadsDirectory);
+        }
+
+        // Move the file to the uploads directory
+        fs.renameSync(req.file.path, filePath);
+
+        // Read and parse the CSV file
+        await new Promise((resolve, reject) => {
+            fs.createReadStream(filePath)
+                .pipe(csv())
+                .on('data', (data) => results.push(data))
+                .on('end', resolve)
+                .on('error', reject);
+        });
+
+        console.log('CSV File Parsed Successfully:', results);
+
+        // Insert parsed data into the database
+        const client = await pool.connect();
+        try {
+            for (const row of results) {
+                // Map CSV columns to variables
+                const fieldName = row['Field'];
+                const location = 'Unknown'; // Provide a default value or adjust as needed
+                const area = 0.0; // Provide a default value or calculate if possible
+                const yieldValue = parseFloat(row['Yld Mass(Dry)(lb/ac)']);
+                const year = new Date(row['Date']).getFullYear();
+                const cropType = row['Product'];
+
+                // Validate data
+                if (
+                    !fieldName ||
+                    isNaN(yieldValue) ||
+                    !cropType ||
+                    isNaN(year)
+                ) {
+                    console.error('Invalid data in row:', row);
+                    continue; // Skip this row
+                }
+
+                // Insert into `field` table
+                const fieldResult = await client.query(
+                    `INSERT INTO field (fieldName, location, area)
+                     VALUES ($1, $2, $3)
+                         ON CONFLICT (fieldName)
+           DO NOTHING
+           RETURNING fieldId`,
+                    [fieldName, location, area]
+                );
+
+                let fieldId;
+                if (fieldResult.rows.length > 0) {
+                    fieldId = fieldResult.rows[0].fieldid;
+                } else {
+                    // If the field already exists, retrieve its fieldId
+                    const existingField = await client.query(
+                        `SELECT fieldId FROM field WHERE fieldName = $1`,
+                        [fieldName]
+                    );
+                    fieldId = existingField.rows[0].fieldid;
+                }
+
+                // Insert into `yieldData` table
+                await client.query(
+                    `INSERT INTO yieldData (yieldData, yieldValue, year, cropType, fieldId)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [0, yieldValue, year, cropType, fieldId]
+                );
+            }
+            res.send('CSV file uploaded and data inserted successfully');
+        } catch (error) {
+            console.error('Error inserting data:', error);
+            res.status(500).send('Error inserting data into the database');
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error('Error handling file:', err);
+        res.status(500).send('Failed to handle uploaded file');
+    } finally {
+        // Remove the temporary file after processing
+        fs.unlink(filePath, (err) => {
+            if (err) console.error('Error deleting uploaded file:', err);
+        });
+    }
+});
+
+
+// Root endpoint
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
+
+>>>>>>> origin/main
 // Start the server
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
