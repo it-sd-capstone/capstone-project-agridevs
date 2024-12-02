@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const authenticateToken = require('../middleware/auth');
+const authenticateToken = require('../utils/authMiddleware');
 
 router.get('/calculate/:fieldId', authenticateToken, async (req, res) => {
     const { fieldId } = req.params;

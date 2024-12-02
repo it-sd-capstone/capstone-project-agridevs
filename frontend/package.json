@@ -13,7 +13,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts ../backend/build"
+    "build": "react-scripts build"
   },
   "browserslist": {
     "production": [
