@@ -11,9 +11,6 @@ const profitRoutes = require('./routes/profit');
 
 const PORT = process.env.PORT || 5000;
 
-// Serve frontend
-app.use(express.static(path.join(__dirname, 'build')));
-
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -24,8 +21,11 @@ app.use('/upload', uploadRoutes);
 app.use('/costs', costRoutes);
 app.use('/profit', profitRoutes);
 
+// Serve frontend
+app.use(express.static(path.join(__dirname, 'frontend', 'build')));
+
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+    res.sendFile(path.join(__dirname, 'frontend', 'build', 'index.html'));
 });
 
 app.listen(PORT, () => {
