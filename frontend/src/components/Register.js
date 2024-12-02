@@ -23,12 +23,16 @@ function Register() {
         e.preventDefault();
 
         try {
-            const response = await axios.post(`${API_BASE_URL}/register`, formData);
+            const response = await axios.post(`${API_BASE_URL}/auth/register`, formData);
             localStorage.setItem('token', response.data.token);
             navigate('/');
         } catch (err) {
-            console.error(err);
-            setError('Registration failed. Please try again.');
+            console.error('Registration error:', err);
+            if (err.response && err.response.data && err.response.data.error) {
+                setError(err.response.data.error);
+            } else {
+                setError('Registration failed. Please try again.');
+            }
         }
     };
 
