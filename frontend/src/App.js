@@ -1,18 +1,18 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Home from './Home';
-import CreateAccountPage from './CreateAccountPage';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import UploadPage from './components/UploadPage';
+import MapView from './components/MapView';
+import Register from './components/Register';
+import Login from './components/Login';
 
 function App() {
     return (
         <Router>
             <Routes>
-                {/* Redirect from root path "/" to "/home" */}
-                <Route path="/" element={<Navigate replace to="/home" />} />
-                {/* Route to Home Component */}
-                <Route path="/home" element={<Home />} />
-                {/* Route to Create Account Component */}
-                <Route path="/createaccountpage" element={<CreateAccountPage />} />
+                <Route path="/" element={<UploadPage />} />
+                <Route path="/map" element={<MapView />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/login" element={<Login />} />
             </Routes>
         </Router>
     );

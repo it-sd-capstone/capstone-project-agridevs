@@ -1,20 +1,25 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "description": "Backend server for Profit Map App",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "start:dev": "npm run build && node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "setup-db": "node dbSetup.js"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^5.0.1",
     "cors": "^2.8.5",
     "csv-parser": "^3.0.0",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "moment-timezone": "^0.5.46",
-    "multer": "^1.4.5-lts.1",
-    "pg": "^8.13.1"
-  }
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "multer": "^1.4.2",
+    "pg": "^8.7.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/it-sd-capstone/capstone-project-agridevs.git"
+  },
+  "private": true
 }
