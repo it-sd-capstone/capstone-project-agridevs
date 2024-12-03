@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useLocation } from 'react-router-dom';
 import bbox from '@turf/bbox';
 
-function MapView() {
+/* function MapView() {
     const [viewport, setViewport] = useState({
         latitude: 37.7749, // Default latitude
         longitude: -122.4194, // Default longitude
@@ -25,7 +25,7 @@ function MapView() {
                     return;
                 }
 
-                let geojsonData;
+                let geojsonData; 
 
                 if (profitData) {
                     // If profitData is passed from UploadPage
@@ -98,4 +98,61 @@ function MapView() {
     );
 }
 
+export default MapView; */
+
+// Attempt to make an easier map ****
+
+const gridElement = document.getElementById('grid');
+const fileInput = document.getElementById('fileInput');
+
+// Function to color-code based on value
+function getColor(value) {
+    if (value < 0) return '#ff6666'; // Red for low values
+    if (value < 350) return '#ffcc66'; // Orange for medium-low values
+    if (value < 700) return '#ffff66'; // Yellow for medium values
+    return '#66ff66'; // Green for high values
+}
+
+// Function to create the grid with explicit 10x10 constraints
+function MapView(data) {
+    gridElement.innerHTML = ''; // Clear any existing grid
+    gridElement.style.gridTemplateColumns = 'repeat(10, 50px)';
+    gridElement.style.gridTemplateRows = 'repeat(10, 50px)';
+
+    for (let i = 0; i < 10; i++) { // Ensure 10 rows
+        for (let j = 0; j < 10; j++) { // Ensure 10 columns
+            const value = data[i] && data[i][j] !== undefined ? data[i][j] : 0; // Default to 0 if missing
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.style.backgroundColor = getColor(value); // Apply color
+            cell.textContent = value; // Display value
+            gridElement.appendChild(cell);
+        }
+    }
+}
+
+// Function to parse CSV
+function parseCSV(content) {
+    return content.split('\n').map(row => row.split(',').map(Number));
+}
+
+// Event listener for file input
+fileInput.addEventListener('change', event => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const csvContent = e.target.result.trim();
+        const gridData = parseCSV(csvContent);
+
+        // Validate and pad the data for a 10x10 grid
+        const paddedData = Array.from({ length: 10 }, (_, i) =>
+        Array.from({ length: 10 }, (_, j) => (gridData[i] && gridData[i][j] !== undefined ? gridData[i][j] : 0))
+        );
+
+        createGrid(paddedData);
+    };
+        reader.readAsText(file);
+});
 export default MapView;

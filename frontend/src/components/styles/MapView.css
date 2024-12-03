@@ -21,3 +21,25 @@
 .map-view .back-button:hover {
     background-color: rgba(255, 255, 255, 1);
 }
+
+/* Attempt at making a simpler grid */
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(10, 50px); /* 10 columns, 50px each */
+    grid-template-rows: repeat(10, 50px); /* 10 rows, 50px each */
+    gap: 2px; /* Gap between cells */
+    justify-content: center;
+}
+
+.cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    height: 50px;
+    width: 50px;
+}
