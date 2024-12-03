@@ -16,7 +16,13 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(router);
-app.use(cors());
+/*app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}));*/
+
+// app.options('/register', cors());
 
 // Setup PostgreSQL connection using DATABASE_URL from environment variables
 const connectionString =
@@ -49,8 +55,10 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
-router.post('/register', async (req, res) => {
-    const { userName, password, firstName, lastName, nameOfFarm, fieldId } = req.body;
+
+
+app.post('/register', async (req, res) => {
+    const { firstname, lastname, username, password, nameoffarm, fieldid } = req.body;
 
     try {
         // Hash the password before storing it
@@ -58,51 +66,20 @@ router.post('/register', async (req, res) => {
 
         // Insert user data into the users table
         const query = `
-            INSERT INTO users (firstName, lastName, nameOfFarm, fieldId, userName, password)
+            INSERT INTO users (firstname, lastname, nameoffarm, fieldid, username, password)
             VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *;
         `;
-        const values = [firstName, lastName, nameOfFarm, fieldId, userName, hashedPassword];
+
+        const values = [firstname, lastname, username, hashedPassword, nameoffarm, fieldid];
+        console.log(query, values);
 
         await pool.query(query, values);
 
         res.status(201).json({ message: 'Account created successfully!' });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Something went wrong, please try again later' });
-    }
-});
-
-module.exports = router;
-
-// Endpoint to create database tables
-app.get('/create-tables', async (req, res) => {
-    const createFieldsTable = `
-        CREATE TABLE IF NOT EXISTS fields (
-                                              id SERIAL PRIMARY KEY,
-                                              field_name VARCHAR(255) NOT NULL UNIQUE,
-            longitude FLOAT,
-            latitude FLOAT
-            );
-    `;
-
-    const createYieldDataTable = `
-        CREATE TABLE IF NOT EXISTS yield_data (
-                                                  id SERIAL PRIMARY KEY,
-                                                  field_id INT NOT NULL,
-                                                  yield_value FLOAT NOT NULL,
-                                                  FOREIGN KEY (field_id) REFERENCES fields (id)
-            );
-    `;
-
-    try {
-        const client = await pool.connect();
-        await client.query(createFieldsTable);
-        await client.query(createYieldDataTable);
-        client.release();
-        res.send('Tables created successfully');
-    } catch (err) {
-        console.error('Error creating tables:', err);
-        res.status(500).send('Failed to create tables');
+        res.status(500).json({ error: err.message || 'Something went wrong, please try again later' });
     }
 });
 
@@ -204,6 +181,21 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         fs.unlink(filePath, (err) => {
             if (err) console.error('Error deleting uploaded file:', err);
         });
+    }
+});
+
+app.get('/profile', async (req, res) => {
+    const userId = req.userId; // Extract userId from token or session
+
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE userId = $1', [userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error fetching user data:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
