@@ -1,92 +1,82 @@
-import React from 'react';
-import ReactMapGL, { Layer, Source } from 'react-map-gl';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { MAPBOX_TOKEN } from '../config';
-import 'mapbox-gl/dist/mapbox-gl.css';
+// frontend/src/components/MapView.js
+import React, { useState, useEffect } from 'react';
+import MapGL, { Source, Layer } from 'react-map-gl';
+import { MAPBOX_TOKEN, API_BASE_URL } from '../config';
 import './styles/MapView.css';
+import axios from 'axios';
+import bbox from '@turf/bbox';
 
 function MapView() {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const { profitData } = location.state || {};
-
-    if (!profitData) {
-        // Redirect to upload page if no data is available
-        navigate('/');
-        return null;
-    }
-
-    // Calculate min and max profit
-    const profitValues = profitData.map((d) => d.profit);
-    const minProfit = Math.min(...profitValues);
-    const maxProfit = Math.max(...profitValues);
-
-    // Set initial viewport
-    const initialLatitude = profitData[0].latitude;
-    const initialLongitude = profitData[0].longitude;
-
-    const [viewport, setViewport] = React.useState({
-        latitude: initialLatitude,
-        longitude: initialLongitude,
-        zoom: 13,
-        bearing: 0,
-        pitch: 0,
+    const [viewport, setViewport] = useState({
+        latitude: 37.7749, // Default latitude
+        longitude: -122.4194, // Default longitude
+        zoom: 12,
     });
+    const [fieldData, setFieldData] = useState(null);
 
-    const geojson = {
-        type: 'FeatureCollection',
-        features: profitData.map((data) => ({
-            type: 'Feature',
-            geometry: {
-                type: 'Point',
-                coordinates: [data.longitude, data.latitude],
-            },
-            properties: {
-                profit: data.profit,
-            },
-        })),
-    };
+    useEffect(() => {
+        const fetchFieldData = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await axios.get(`${API_BASE_URL}/profit/geojson`, {
+                    headers: {
+                        Authorization: token,
+                    },
+                });
+
+                setFieldData(response.data);
+
+                // Adjust viewport to the field data's bounding box
+                if (response.data && response.data.features.length > 0) {
+                    const [minLng, minLat, maxLng, maxLat] = bbox(response.data);
+                    setViewport((prevViewport) => ({
+                        ...prevViewport,
+                        latitude: (minLat + maxLat) / 2,
+                        longitude: (minLng + maxLng) / 2,
+                        zoom: 12,
+                    }));
+                }
+            } catch (err) {
+                console.error('Error fetching field data:', err);
+            }
+        };
+
+        fetchFieldData();
+    }, []);
 
     return (
-        <div className="map-view">
-            <ReactMapGL
+        <div className="map-container">
+            <MapGL
                 {...viewport}
                 width="100%"
-                height="600px"
-                onViewportChange={(nextViewport) => setViewport(nextViewport)}
+                height="100%"
+                mapStyle="mapbox://styles/mapbox/satellite-streets-v12" // Use satellite imagery with roads
+                onViewportChange={setViewport}
                 mapboxApiAccessToken={MAPBOX_TOKEN}
             >
-                <Source id="profit-data" type="geojson" data={geojson}>
-                    <Layer
-                        id="profit-heatmap"
-                        type="heatmap"
-                        paint={{
-                            'heatmap-weight': [
-                                'interpolate',
-                                ['linear'],
-                                ['get', 'profit'],
-                                minProfit,
-                                0,
-                                maxProfit,
-                                1,
-                            ],
-                            'heatmap-intensity': 1,
-                            'heatmap-radius': 20,
-                            'heatmap-color': [
-                                'interpolate',
-                                ['linear'],
-                                ['heatmap-density'],
-                                0,
-                                'red',
-                                0.5,
-                                'yellow',
-                                1,
-                                'green',
-                            ],
-                        }}
-                    />
-                </Source>
-            </ReactMapGL>
+                {fieldData && (
+                    <Source id="field-data" type="geojson" data={fieldData}>
+                        <Layer
+                            id="field-layer"
+                            type="fill"
+                            paint={{
+                                'fill-color': [
+                                    'interpolate',
+                                    ['linear'],
+                                    ['get', 'profit'],
+                                    0,
+                                    '#FF0000', // Red for low profit
+                                    500,
+                                    '#FFFF00', // Yellow for medium profit
+                                    1000,
+                                    '#00FF00', // Green for high profit
+                                ],
+                                'fill-opacity': 0.7,
+                            }}
+                        />
+                    </Source>
+                )}
+            </MapGL>
         </div>
     );
 }
