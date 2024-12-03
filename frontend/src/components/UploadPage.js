@@ -86,7 +86,7 @@ function UploadPage() {
             <div className="upload-section">
                 <div className="left-section">
                     <label>Upload Yield CSV File:</label>
-                    <input type="file" accept=".csv" onChange={handleFileChange} />
+                    <input type="file" id="file-upload" accept=".csv" onChange={handleFileChange} aria-label="Upload a CSV file" />
                 </div>
                 <div className="right-section">
                     <label>Enter Costs:</label>
