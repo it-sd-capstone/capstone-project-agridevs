@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './components/Home';
 import UploadPage from './components/UploadPage';
 import MapView from './components/MapView';
 import Register from './components/Register';
@@ -9,9 +10,10 @@ import Navbar from './components/Navbar';
 function App() {
     return (
         <Router>
-            <Navbar /> {Navbar}
+            <Navbar />
             <Routes>
-                <Route path="/" element={<UploadPage />} />
+                <Route path="/" element={<Home />} />
+                <Route path="/upload" element={<UploadPage />} />
                 <Route path="/map" element={<MapView />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/login" element={<Login />} />

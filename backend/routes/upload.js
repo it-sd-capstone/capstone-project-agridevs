@@ -24,8 +24,8 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
     try {
         // Insert new field record
         const fieldResult = await pool.query(
-            'INSERT INTO fields (user_id) VALUES ($1) RETURNING id',
-            [userId]
+            'INSERT INTO fields (user_id, name) VALUES ($1, $2) RETURNING id',
+            [userId, 'New Field']
         );
 
         const fieldId = fieldResult.rows[0].id;
@@ -35,29 +35,41 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
         fs.createReadStream(filePath)
             .pipe(csvParser())
             .on('data', (row) => {
-                yieldData.push({
-                    field_id: fieldId,
-                    user_id: userId,
-                    latitude: parseFloat(row.latitude),
-                    longitude: parseFloat(row.longitude),
-                    yield_volume: parseFloat(row.yield_volume),
-                });
+                // Extract necessary fields from the CSV
+                if (
+                    row['Longitude'] &&
+                    row['Latitude'] &&
+                    row['Yld Vol(Dry)(bu/ac)']
+                ) {
+                    yieldData.push({
+                        field_id: fieldId,
+                        user_id: userId,
+                        latitude: parseFloat(row['Latitude']),
+                        longitude: parseFloat(row['Longitude']),
+                        yield_volume: parseFloat(row['Yld Vol(Dry)(bu/ac)']),
+                    });
+                }
             })
             .on('end', async () => {
-                // Insert yield data into the database
-                const insertPromises = yieldData.map((data) =>
-                    pool.query(
-                        'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume) VALUES ($1, $2, $3, $4, $5)',
-                        [data.field_id, data.user_id, data.latitude, data.longitude, data.yield_volume]
-                    )
-                );
+                try {
+                    // Insert yield data into the database
+                    const insertPromises = yieldData.map((data) =>
+                        pool.query(
+                            'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume, date) VALUES ($1, $2, $3, $4, $5, NOW())',
+                            [data.field_id, data.user_id, data.latitude, data.longitude, data.yield_volume]
+                        )
+                    );
 
-                await Promise.all(insertPromises);
+                    await Promise.all(insertPromises);
 
-                // Delete the uploaded file
-                fs.unlinkSync(filePath);
+                    // Delete the uploaded file
+                    fs.unlinkSync(filePath);
 
-                res.json({ message: 'Yield data uploaded successfully.', fieldId });
+                    res.json({ message: 'Yield data uploaded successfully.', fieldId });
+                } catch (err) {
+                    console.error('Error inserting yield data:', err);
+                    res.status(500).json({ error: 'Server error during yield data insertion.' });
+                }
             });
     } catch (err) {
         console.error('Error uploading yield data:', err);

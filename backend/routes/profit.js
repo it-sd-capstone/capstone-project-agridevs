@@ -19,8 +19,8 @@ router.get('/calculate/:fieldId', authenticateToken, async (req, res) => {
 
         // Fetch cost data for the field
         const costDataResult = await pool.query(
-            'SELECT * FROM costs WHERE field_id = $1 AND user_id = $2',
-            [fieldId, userId]
+            'SELECT * FROM costs WHERE field_id = $1',
+            [fieldId]
         );
 
         const costData = costDataResult.rows[0];
@@ -32,7 +32,7 @@ router.get('/calculate/:fieldId', authenticateToken, async (req, res) => {
         // Calculate profit for each yield data point
         const profitData = yieldData.map((dataPoint) => {
             const profit =
-                dataPoint.yield_volume * costData.crop_price -
+                (dataPoint.yield_volume * costData.crop_price) -
                 (costData.fertilizer_cost +
                     costData.seed_cost +
                     costData.maintenance_cost +
@@ -59,39 +59,6 @@ router.get('/calculate/:fieldId', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Error calculating profit:', err);
         res.status(500).json({ error: 'Server error during profit calculation.' });
-    }
-});
-
-// Endpoint to get GeoJSON data for all fields
-router.get('/geojson', authenticateToken, async (req, res) => {
-    const userId = req.user.userId;
-
-    try {
-        // Fetch profit data from the database
-        const result = await pool.query(
-            `SELECT ST_AsGeoJSON(geom) as geometry, profit
-       FROM profit_data
-       WHERE user_id = $1`,
-            [userId]
-        );
-
-        const features = result.rows.map((row) => ({
-            type: 'Feature',
-            geometry: JSON.parse(row.geometry),
-            properties: {
-                profit: row.profit,
-            },
-        }));
-
-        const geojson = {
-            type: 'FeatureCollection',
-            features: features,
-        };
-
-        res.json(geojson);
-    } catch (err) {
-        console.error('Error fetching GeoJSON data:', err);
-        res.status(500).json({ error: 'Failed to fetch field data.' });
     }
 });
 

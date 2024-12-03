@@ -14,15 +14,23 @@ function Navbar() {
 
     return (
         <nav className="navbar">
-            <h1>Profit Map</h1>
-            <ul>
+            <div className="navbar-logo">
+                <h1>Profit Map</h1>
+            </div>
+            <ul className="navbar-links">
                 {token ? (
                     <>
                         <li>
-                            <Link to="/">Upload Data</Link>
+                            <Link to="/">Home</Link>
                         </li>
                         <li>
-                            <button onClick={handleLogout}>Logout</button>
+                            <Link to="/upload">Upload Data</Link>
+                        </li>
+                        <li>
+                            <Link to="/map">View Map</Link>
+                        </li>
+                        <li>
+                            <button onClick={handleLogout} className="logout-button">Logout</button>
                         </li>
                     </>
                 ) : (

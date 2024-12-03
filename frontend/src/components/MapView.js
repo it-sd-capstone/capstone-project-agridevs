@@ -11,6 +11,8 @@ function MapView() {
         latitude: 37.7749, // Default latitude
         longitude: -122.4194, // Default longitude
         zoom: 12,
+        width: '100%',
+        height: '100%',
     });
     const [fieldData, setFieldData] = useState(null);
     const location = useLocation();
@@ -64,10 +66,8 @@ function MapView() {
         <div className="map-container">
             <MapGL
                 {...viewport}
-                width="100%"
-                height="100%"
                 mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
-                onViewportChange={setViewport}
+                onViewportChange={(newViewport) => setViewport(newViewport)}
                 mapboxApiAccessToken={MAPBOX_TOKEN}
             >
                 {fieldData && (
@@ -80,12 +80,9 @@ function MapView() {
                                     'interpolate',
                                     ['linear'],
                                     ['get', 'profit'],
-                                    0,
-                                    '#FF0000',
-                                    500,
-                                    '#FFFF00',
-                                    1000,
-                                    '#00FF00',
+                                    -1000, '#FF0000', // Red for negative profit
+                                    0, '#FFFF00',     // Yellow for break-even
+                                    1000, '#00FF00',  // Green for high profit
                                 ],
                                 'circle-radius': 5,
                                 'circle-opacity': 0.8,
