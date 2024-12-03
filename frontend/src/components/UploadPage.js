@@ -74,7 +74,7 @@ function UploadPage() {
             // Navigate to the MapView component with profit data
             navigate('/map', { state: { profitData } });
         } catch (err) {
-            console.error(err);
+            console.error('Error generating profit map:', err);
             setError('An error occurred while generating the profit map.');
         }
     };

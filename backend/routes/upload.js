@@ -1,93 +1,68 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const csv = require('csv-parser');
-const fs = require('fs');
 const pool = require('../db');
 const authenticateToken = require('../utils/authMiddleware');
+const path = require('path');
+const csvParser = require('csv-parser');
+const fs = require('fs');
 
-// Configure multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+    destination: './uploads/',
+    filename: function (req, file, cb) {
+        cb(null, 'yield_data_' + Date.now() + path.extname(file.originalname));
+    },
+});
+const upload = multer({ storage: storage });
 
+// Upload yield data CSV file
 router.post('/yield-data', authenticateToken, upload.single('file'), async (req, res) => {
-    // Ensure a file was uploaded
-    if (!req.file) {
-        return res.status(400).send('No file uploaded.');
-    }
+    const userId = req.user.userId;
+    const filePath = req.file.path;
 
-    const results = [];
+    try {
+        // Insert new field record
+        const fieldResult = await pool.query(
+            'INSERT INTO fields (user_id) VALUES ($1) RETURNING id',
+            [userId]
+        );
 
-    // Parse CSV file
-    fs.createReadStream(req.file.path)
-        .pipe(csv())
-        .on('data', (data) => results.push(data))
-        .on('end', async () => {
-            try {
-                // Get the user ID from the authenticated token
-                const userId = req.user.userId;
+        const fieldId = fieldResult.rows[0].id;
 
-                // Extract the field name from the first row
-                const fieldName = results[0]['Field'] || 'Unknown Field';
-
-                // Check if the field already exists for this user
-                let fieldResult = await pool.query(
-                    'SELECT id FROM fields WHERE name = $1 AND user_id = $2',
-                    [fieldName, userId]
+        // Parse CSV file and insert yield data
+        const yieldData = [];
+        fs.createReadStream(filePath)
+            .pipe(csvParser())
+            .on('data', (row) => {
+                yieldData.push({
+                    field_id: fieldId,
+                    user_id: userId,
+                    latitude: parseFloat(row.latitude),
+                    longitude: parseFloat(row.longitude),
+                    yield_volume: parseFloat(row.yield_volume),
+                });
+            })
+            .on('end', async () => {
+                // Insert yield data into the database
+                const insertPromises = yieldData.map((data) =>
+                    pool.query(
+                        'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume) VALUES ($1, $2, $3, $4, $5)',
+                        [data.field_id, data.user_id, data.latitude, data.longitude, data.yield_volume]
+                    )
                 );
 
-                let fieldId;
-                if (fieldResult.rows.length > 0) {
-                    fieldId = fieldResult.rows[0].id;
-                } else {
-                    // Insert new field
-                    fieldResult = await pool.query(
-                        'INSERT INTO fields (user_id, name, created_at) VALUES ($1, $2, NOW()) RETURNING id',
-                        [userId, fieldName]
-                    );
-                    fieldId = fieldResult.rows[0].id;
-                }
+                await Promise.all(insertPromises);
 
-                // Prepare the insert statement for yield data
-                const insertYieldDataQuery = `
-          INSERT INTO yield_data (field_id, longitude, latitude, yield_volume, date, created_at)
-          VALUES ($1, $2, $3, $4, $5, NOW())
-        `;
-
-                // Iterate over the results and insert data
-                for (const row of results) {
-                    // Extract and parse data
-                    const longitude = parseFloat(row['Longitude']);
-                    const latitude = parseFloat(row['Latitude']);
-                    const yieldVolume = parseFloat(row['Yld Vol(Dry)(bu/ac)']);
-                    const dateStr = row['Date'];
-                    const date = new Date(dateStr);
-
-                    // Validate the data
-                    if (
-                        isNaN(longitude) ||
-                        isNaN(latitude) ||
-                        isNaN(yieldVolume) ||
-                        isNaN(date.getTime())
-                    ) {
-                        console.warn('Invalid data in row:', row);
-                        continue; // Skip invalid rows
-                    }
-
-                    // Insert data into yield_data table
-                    await pool.query(insertYieldDataQuery, [fieldId, longitude, latitude, yieldVolume, date]);
-                }
+                // Delete the uploaded file
+                fs.unlinkSync(filePath);
 
                 res.json({ message: 'Yield data uploaded successfully.', fieldId });
-            } catch (err) {
-                console.error(err);
-                res.status(500).send('Error processing yield data.');
-            } finally {
-                // Delete the temporary file
-                fs.unlink(req.file.path, (err) => {
-                    if (err) console.error(err);
-                });
-            }
-        });
+            });
+    } catch (err) {
+        console.error('Error uploading yield data:', err);
+        res.status(500).json({ error: 'Server error during yield data upload.' });
+    }
 });
 
 module.exports = router;

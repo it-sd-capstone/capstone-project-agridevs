@@ -1,9 +1,9 @@
-// frontend/src/components/MapView.js
 import React, { useState, useEffect } from 'react';
 import MapGL, { Source, Layer } from 'react-map-gl';
 import { MAPBOX_TOKEN, API_BASE_URL } from '../config';
 import './styles/MapView.css';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom';
 import bbox from '@turf/bbox';
 
 function MapView() {
@@ -13,22 +13,38 @@ function MapView() {
         zoom: 12,
     });
     const [fieldData, setFieldData] = useState(null);
+    const location = useLocation();
+    const { profitData } = location.state || {};
 
     useEffect(() => {
         const fetchFieldData = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const response = await axios.get(`${API_BASE_URL}/profit/geojson`, {
-                    headers: {
-                        Authorization: token,
-                    },
-                });
+                if (!token) {
+                    console.error('No token found. Please log in.');
+                    return;
+                }
 
-                setFieldData(response.data);
+                let geojsonData;
+
+                if (profitData) {
+                    // If profitData is passed from UploadPage
+                    geojsonData = profitData;
+                } else {
+                    // Fetch profit data from backend
+                    const response = await axios.get(`${API_BASE_URL}/profit/geojson`, {
+                        headers: {
+                            Authorization: token,
+                        },
+                    });
+                    geojsonData = response.data;
+                }
+
+                setFieldData(geojsonData);
 
                 // Adjust viewport to the field data's bounding box
-                if (response.data && response.data.features.length > 0) {
-                    const [minLng, minLat, maxLng, maxLat] = bbox(response.data);
+                if (geojsonData && geojsonData.features && geojsonData.features.length > 0) {
+                    const [minLng, minLat, maxLng, maxLat] = bbox(geojsonData);
                     setViewport((prevViewport) => ({
                         ...prevViewport,
                         latitude: (minLat + maxLat) / 2,
@@ -42,7 +58,7 @@ function MapView() {
         };
 
         fetchFieldData();
-    }, []);
+    }, [profitData]);
 
     return (
         <div className="map-container">
@@ -50,7 +66,7 @@ function MapView() {
                 {...viewport}
                 width="100%"
                 height="100%"
-                mapStyle="mapbox://styles/mapbox/satellite-streets-v12" // Use satellite imagery with roads
+                mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
                 onViewportChange={setViewport}
                 mapboxApiAccessToken={MAPBOX_TOKEN}
             >
@@ -58,20 +74,21 @@ function MapView() {
                     <Source id="field-data" type="geojson" data={fieldData}>
                         <Layer
                             id="field-layer"
-                            type="fill"
+                            type="circle"
                             paint={{
-                                'fill-color': [
+                                'circle-color': [
                                     'interpolate',
                                     ['linear'],
                                     ['get', 'profit'],
                                     0,
-                                    '#FF0000', // Red for low profit
+                                    '#FF0000',
                                     500,
-                                    '#FFFF00', // Yellow for medium profit
+                                    '#FFFF00',
                                     1000,
-                                    '#00FF00', // Green for high profit
+                                    '#00FF00',
                                 ],
-                                'fill-opacity': 0.7,
+                                'circle-radius': 5,
+                                'circle-opacity': 0.8,
                             }}
                         />
                     </Source>
