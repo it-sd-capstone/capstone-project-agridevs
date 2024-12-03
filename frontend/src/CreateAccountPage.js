@@ -1,13 +1,15 @@
 import React, {useState} from 'react';
-import { Link } from 'react-router-dom';
+import {Link, useNavigate} from 'react-router-dom';
 import './CreateAccountPage.css';
 
 function CreateAccountPage() {
+    const navigate = useNavigate();
+
     // State to store form data
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
-        userName: '',
+        username: '',
         password: '',
         confirmPassword: '',
         nameOfFarm: '',
@@ -31,7 +33,7 @@ function CreateAccountPage() {
 
         let firstName = formData.firstName;
         let lastName = formData.lastName;
-        let userName = formData.userName;
+        let username = formData.username;
         let password = formData.password;
         let confirmPassword = formData.confirmPassword;
         let nameOfFarm = formData.nameOfFarm;
@@ -46,7 +48,7 @@ function CreateAccountPage() {
         const userData = {
             firstName,
             lastName,
-            userName,
+            username,
             password,
             nameOfFarm,
             fieldId,
@@ -63,6 +65,13 @@ function CreateAccountPage() {
 
             if (response.ok) {
                 alert('User registered successfully!');
+                const data = await response.json();
+
+                // Optionally, store user info or token in localStorage
+                localStorage.setItem('token', data.token);
+
+                // Redirect to profile page
+                navigate('/ProfilePage');
             } else {
                 const data = await response.json().catch(() => ({}));
                 alert(data.error || 'Something went wrong!');
@@ -105,8 +114,8 @@ function CreateAccountPage() {
                     <label>Username:</label>
                     <input
                         type="text"
-                        name="userName"
-                        value={formData.userName}
+                        name="username"
+                        value={formData.username}
                         onChange={handleChange}
                         required
                     />

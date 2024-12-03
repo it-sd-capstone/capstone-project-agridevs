@@ -13,7 +13,7 @@ root.render(
   </React.StrictMode>
 );
 
-let rent = 0; // Waiting for field names for dynamic changes
+/*let rent = 0; // Waiting for field names for dynamic changes
 let fertilizerCost = 0; // Waiting for field names for dynamic changes
 let seedCost = 0; // Waiting for field names for dynamic changes
 let maintenanceCost = 0; // Waiting for field names for dynamic changes
@@ -84,7 +84,7 @@ export const calculateGradientColor = (yldVolDry, prod) => {
 };
 
 // Eventually change this to show for each square, or area.
-console.log(gradientColor)
+console.log(gradientColor)*/
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
