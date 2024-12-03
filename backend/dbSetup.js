@@ -1,4 +1,3 @@
-// backend/dbSetup.js
 require('dotenv').config();
 const pool = require('./db');
 
@@ -32,18 +31,19 @@ const createTables = async () => {
       );
     `);
 
-        // Create yield_data table
+// Create yield_data table
         await pool.query(`
-      CREATE TABLE yield_data (
-        id SERIAL PRIMARY KEY,
-        field_id INTEGER REFERENCES fields(id),
-        longitude DOUBLE PRECISION NOT NULL,
-        latitude DOUBLE PRECISION NOT NULL,
-        yield_volume DOUBLE PRECISION NOT NULL,
-        date DATE,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
+            CREATE TABLE yield_data (
+                                        id SERIAL PRIMARY KEY,
+                                        field_id INTEGER REFERENCES fields(id),
+                                        user_id INTEGER REFERENCES users(id),
+                                        longitude DOUBLE PRECISION NOT NULL,
+                                        latitude DOUBLE PRECISION NOT NULL,
+                                        yield_volume DOUBLE PRECISION NOT NULL,
+                                        date DATE,
+                                        created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
 
         // Create costs table
         await pool.query(`

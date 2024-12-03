@@ -3,7 +3,7 @@ import MapGL, { Source, Layer } from 'react-map-gl';
 import { MAPBOX_TOKEN, API_BASE_URL } from '../config';
 import './styles/MapView.css';
 import axios from 'axios';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import bbox from '@turf/bbox';
 
 function MapView() {
@@ -15,15 +15,19 @@ function MapView() {
         height: '100%',
     });
     const [fieldData, setFieldData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const location = useLocation();
+    const navigate = useNavigate();
     const { profitData } = location.state || {};
 
     useEffect(() => {
-        const fetchFieldData = async () => {
+        (async () => {
             try {
                 const token = localStorage.getItem('token');
                 if (!token) {
-                    console.error('No token found. Please log in.');
+                    console.error('No token found. Redirecting to login page.');
+                    navigate('/login');
                     return;
                 }
 
@@ -39,7 +43,12 @@ function MapView() {
                             Authorization: token,
                         },
                     });
-                    geojsonData = response.data;
+
+                    if (response.headers['content-type'].includes('application/json')) {
+                        geojsonData = response.data;
+                    } else {
+                        throw new Error('Invalid response format: Expected JSON');
+                    }
                 }
 
                 setFieldData(geojsonData);
@@ -54,13 +63,23 @@ function MapView() {
                         zoom: 12,
                     }));
                 }
+
+                setLoading(false);
             } catch (err) {
                 console.error('Error fetching field data:', err);
+                setError('An error occurred while fetching the field data. Please try again later.');
+                setLoading(false);
             }
-        };
+        })();
+    }, [profitData, navigate]);
 
-        fetchFieldData();
-    }, [profitData]);
+    if (loading) {
+        return <div className="map-container">Loading map data...</div>;
+    }
+
+    if (error) {
+        return <div className="map-container error-message">{error}</div>;
+    }
 
     return (
         <div className="map-container">

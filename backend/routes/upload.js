@@ -52,6 +52,10 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
             })
             .on('end', async () => {
                 try {
+                    if (yieldData.length === 0) {
+                        throw new Error('No valid data found in the CSV file');
+                    }
+
                     // Insert yield data into the database
                     const insertPromises = yieldData.map((data) =>
                         pool.query(
@@ -70,6 +74,10 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                     console.error('Error inserting yield data:', err);
                     res.status(500).json({ error: 'Server error during yield data insertion.' });
                 }
+            })
+            .on('error', (err) => {
+                console.error('Error reading CSV file:', err);
+                res.status(500).json({ error: 'Error processing CSV file.' });
             });
     } catch (err) {
         console.error('Error uploading yield data:', err);
