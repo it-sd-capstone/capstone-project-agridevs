@@ -59,7 +59,7 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                     // Insert yield data into the database
                     const insertPromises = yieldData.map((data) =>
                         pool.query(
-                            'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume, date) VALUES ($1, $2, $3, $4, $5, NOW())',
+                            'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume, created_at) VALUES ($1, $2, $3, $4, $5, NOW())',
                             [data.field_id, data.user_id, data.latitude, data.longitude, data.yield_volume]
                         )
                     );
