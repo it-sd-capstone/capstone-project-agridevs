@@ -1,28 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import MapGL, { Source, Layer } from 'react-map-gl';
-import { MAPBOX_TOKEN, API_BASE_URL } from '../config';
+import React, { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, GeoJSON, LayersControl } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import './styles/MapView.css';
 import axios from 'axios';
-import { useLocation, useNavigate } from 'react-router-dom';
-import bbox from '@turf/bbox';
+import { useNavigate } from 'react-router-dom';
 
-function MapView() {
-    const [viewport, setViewport] = useState({
-        latitude: 37.7749, // Default latitude
-        longitude: -122.4194, // Default longitude
-        zoom: 12,
-        width: '100%',
-        height: '100%',
-    });
-    const [fieldData, setFieldData] = useState(null);
-    const [loading, setLoading] = useState(true);
+const { BaseLayer } = LayersControl;
+
+const MapView = () => {
+    const [geoJsonData, setGeoJsonData] = useState(null);
+    const [userLocation, setUserLocation] = useState([37.7749, -122.4194]); // Default coordinates (San Francisco)
     const [error, setError] = useState(null);
-    const location = useLocation();
     const navigate = useNavigate();
-    const { profitData } = location.state || {};
 
     useEffect(() => {
-        (async () => {
+        // Get user's current location using browser geolocation API
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLocation([position.coords.latitude, position.coords.longitude]);
+                },
+                (error) => {
+                    console.error("Error getting user location: ", error);
+                }
+            );
+        }
+
+        // Fetch profit data from backend
+        const fetchProfitData = async () => {
             try {
                 const token = localStorage.getItem('token');
                 if (!token) {
@@ -31,51 +36,26 @@ function MapView() {
                     return;
                 }
 
-                let geojsonData;
+                const response = await axios.get('/profit/geojson', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
 
-                if (profitData) {
-                    // If profitData is passed from UploadPage
-                    geojsonData = profitData;
+                // Check if response is JSON
+                if (response.headers['content-type'] && response.headers['content-type'].includes('application/json')) {
+                    setGeoJsonData(response.data);
                 } else {
-                    // Fetch profit data from backend
-                    const response = await axios.get(`${API_BASE_URL}/profit/geojson`, {
-                        headers: {
-                            Authorization: token,
-                        },
-                    });
-
-                    if (response.headers['content-type'].includes('application/json')) {
-                        geojsonData = response.data;
-                    } else {
-                        throw new Error('Invalid response format: Expected JSON');
-                    }
+                    throw new Error('Invalid response format: Expected JSON');
                 }
-
-                setFieldData(geojsonData);
-
-                // Adjust viewport to the field data's bounding box
-                if (geojsonData && geojsonData.features && geojsonData.features.length > 0) {
-                    const [minLng, minLat, maxLng, maxLat] = bbox(geojsonData);
-                    setViewport((prevViewport) => ({
-                        ...prevViewport,
-                        latitude: (minLat + maxLat) / 2,
-                        longitude: (minLng + maxLng) / 2,
-                        zoom: 12,
-                    }));
-                }
-
-                setLoading(false);
-            } catch (err) {
-                console.error('Error fetching field data:', err);
-                setError('An error occurred while fetching the field data. Please try again later.');
-                setLoading(false);
+            } catch (error) {
+                console.error("Error fetching GeoJSON data: ", error);
+                setError('An error occurred while fetching the profit data. Please try again later.');
             }
-        })();
-    }, [profitData, navigate]);
+        };
 
-    if (loading) {
-        return <div className="map-container">Loading map data...</div>;
-    }
+        fetchProfitData();
+    }, [navigate]);
 
     if (error) {
         return <div className="map-container error-message">{error}</div>;
@@ -83,36 +63,39 @@ function MapView() {
 
     return (
         <div className="map-container">
-            <MapGL
-                {...viewport}
-                mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
-                onViewportChange={(newViewport) => setViewport(newViewport)}
-                mapboxApiAccessToken={MAPBOX_TOKEN}
-            >
-                {/* Overlay the field data on the map */}
-                {fieldData && (
-                    <Source id="field-data" type="geojson" data={fieldData}>
-                        <Layer
-                            id="field-layer"
-                            type="circle"
-                            paint={{
-                                'circle-color': [
-                                    'interpolate',
-                                    ['linear'],
-                                    ['get', 'profit'],
-                                    -1000, '#FF0000', // Red for negative profit
-                                    0, '#FFFF00',     // Yellow for break-even
-                                    1000, '#00FF00',  // Green for high profit
-                                ],
-                                'circle-radius': 5,
-                                'circle-opacity': 0.8,
-                            }}
+            <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
+                <LayersControl position="topright">
+                    {/* Satellite with Streets Layer */}
+                    <BaseLayer checked name="Satellite with Roads">
+                        <TileLayer
+                            url={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v11/tiles/{z}/{x}/{y}?access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`}
+                            attribution='&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> contributors'
                         />
-                    </Source>
+                    </BaseLayer>
+
+                    {/* Street Layer */}
+                    <BaseLayer name="Streets">
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='&copy; OpenStreetMap contributors'
+                        />
+                    </BaseLayer>
+                </LayersControl>
+
+                {/* Render GeoJSON data if available */}
+                {geoJsonData && (
+                    <GeoJSON
+                        data={geoJsonData}
+                        style={(feature) => ({
+                            color: feature.properties.profit < 0 ? 'red' : feature.properties.profit > 0 ? 'green' : 'yellow',
+                            weight: 2,
+                            opacity: 0.6,
+                        })}
+                    />
                 )}
-            </MapGL>
+            </MapContainer>
         </div>
     );
-}
+};
 
 export default MapView;

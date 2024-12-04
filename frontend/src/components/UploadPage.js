@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const UploadPage = () => {
     const [costs, setCosts] = useState({ fertilizer: '', seed: '', maintenance: '', misc: '', cropPrice: '' });
     const [file, setFile] = useState(null);
     const [error, setError] = useState(null);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
@@ -43,7 +43,7 @@ const UploadPage = () => {
             await axios.post(`/calculate/${response.data.fieldId}`);
 
             // Navigate to the map page after successful profit calculation
-            history.push('/view-map');
+            navigate('/view-map');
         } catch (err) {
             console.error('Error uploading data:', err);
             setError('An error occurred while uploading data and generating the profit map.');
