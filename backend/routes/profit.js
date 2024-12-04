@@ -3,62 +3,52 @@ const router = express.Router();
 const pool = require('../db');
 const authenticateToken = require('../utils/authMiddleware');
 
-// Calculate profit and return GeoJSON data
-router.get('/calculate/:fieldId', authenticateToken, async (req, res) => {
-    const { fieldId } = req.params;
-    const userId = req.user.userId;
-
+// Calculate profit for a specific field and insert into profits table
+router.post('/calculate-profit', authenticateToken, async (req, res) => {
     try {
-        // Fetch yield data for the field
-        const yieldDataResult = await pool.query(
-            'SELECT * FROM yield_data WHERE field_id = $1 AND user_id = $2',
-            [fieldId, userId]
-        );
+        const { fieldId } = req.body;
 
+        // Get all yield data for the specified field
+        const yieldDataResult = await pool.query('SELECT * FROM yield_data WHERE field_id = $1', [fieldId]);
         const yieldData = yieldDataResult.rows;
 
-        // Fetch cost data for the field
-        const costDataResult = await pool.query(
-            'SELECT * FROM costs WHERE field_id = $1',
-            [fieldId]
-        );
-
+        // Get the cost data for the specified field
+        const costDataResult = await pool.query('SELECT * FROM costs WHERE field_id = $1', [fieldId]);
         const costData = costDataResult.rows[0];
 
-        if (!costData) {
-            return res.status(400).json({ error: 'Cost data not found for this field.' });
+        if (!yieldData.length || !costData) {
+            throw new Error('No data found for profit calculation.');
         }
 
-        // Calculate profit for each yield data point
-        const profitData = yieldData.map((dataPoint) => {
-            const profit =
-                (dataPoint.yield_volume * costData.crop_price) -
-                (costData.fertilizer_cost +
-                    costData.seed_cost +
-                    costData.maintenance_cost +
-                    costData.misc_cost);
+        const totalCost = costData.total_cost;
+        const cropPrice = costData.crop_price;
+
+        // Calculate profit for each yield data entry
+        const profitResults = yieldData.map(yieldEntry => {
+            const revenue = yieldEntry.yield_volume * cropPrice;
+            const profit = revenue - totalCost;
 
             return {
-                type: 'Feature',
-                geometry: {
-                    type: 'Point',
-                    coordinates: [dataPoint.longitude, dataPoint.latitude],
-                },
-                properties: {
-                    profit: profit,
-                },
+                field_id: fieldId,
+                yield_data_id: yieldEntry.id,
+                profit
             };
         });
 
-        const geojson = {
-            type: 'FeatureCollection',
-            features: profitData,
-        };
+        // Insert calculated profits into the `profits` table
+        const insertPromises = profitResults.map(profitData =>
+            pool.query(
+                'INSERT INTO profits (field_id, yield_data_id, profit, created_at) VALUES ($1, $2, $3, NOW())',
+                [profitData.field_id, profitData.yield_data_id, profitData.profit]
+            )
+        );
 
-        res.json(geojson);
+        await Promise.all(insertPromises);
+
+        res.status(200).json({ message: 'Profit calculated and saved successfully.' });
     } catch (err) {
         console.error('Error calculating profit:', err);
-        res.status(500).json({ error: 'Server error during profit calculation.' });
+        res.status(500).json({ error: 'Error calculating profit.' });
     }
 });
 
