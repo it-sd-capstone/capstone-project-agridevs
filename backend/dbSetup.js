@@ -40,7 +40,6 @@ const createTables = async () => {
                                         longitude DOUBLE PRECISION NOT NULL,
                                         latitude DOUBLE PRECISION NOT NULL,
                                         yield_volume DOUBLE PRECISION NOT NULL,
-                                        date DATE,
                                         created_at TIMESTAMP DEFAULT NOW()
             );
         `);
