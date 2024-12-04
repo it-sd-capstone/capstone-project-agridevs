@@ -89,6 +89,7 @@ function MapView() {
                 onViewportChange={(newViewport) => setViewport(newViewport)}
                 mapboxApiAccessToken={MAPBOX_TOKEN}
             >
+                {/* Overlay the field data on the map */}
                 {fieldData && (
                     <Source id="field-data" type="geojson" data={fieldData}>
                         <Layer
