@@ -20,15 +20,16 @@ const upload = multer({ storage: storage });
 router.post('/yield-data', authenticateToken, upload.single('file'), async (req, res) => {
     const userId = req.user.userId;
     const filePath = req.file.path;
+    const fieldName = req.body.field_name || 'Default Field Name'; // Get the field name from the request
 
     console.log('Received request to /upload/yield-data');
-    console.log('User ID:', req.user.userId);
+    console.log('User ID:', userId);
 
     try {
-        // Insert new field record
+        // Insert new field record with the provided name
         const fieldResult = await pool.query(
-            'INSERT INTO fields (user_id) VALUES ($1) RETURNING id',
-            [userId]
+            'INSERT INTO fields (user_id, name) VALUES ($1, $2) RETURNING id',
+            [userId, fieldName]
         );
 
         const fieldId = fieldResult.rows[0].id;
@@ -39,7 +40,7 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
             .pipe(csvParser())
             .on('error', (err) => {
                 console.error('Error reading CSV file:', err);
-                fs.unlinkSync(filePath); // Delete the file if there's an error
+                fs.unlinkSync(filePath); // Delete the file if there is an error
                 res.status(500).json({ error: 'Error reading CSV file.', details: err.message });
             })
             .on('data', (row) => {
@@ -50,7 +51,6 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
 
                 if (isNaN(latitude) || isNaN(longitude) || isNaN(yieldVolume)) {
                     console.error('Invalid data in CSV row:', row);
-                    // Optionally, you can skip this row or handle it differently
                 } else {
                     yieldData.push({
                         field_id: fieldId,
@@ -80,12 +80,16 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                 } catch (err) {
                     console.error('Error inserting yield data into database:', err);
                     fs.unlinkSync(filePath);
-                    res.status(500).json({ error: 'Error inserting yield data into database.', details: err.message });
+                    res
+                        .status(500)
+                        .json({ error: 'Error inserting yield data into database.', details: err.message });
                 }
             });
     } catch (err) {
         console.error('Error uploading yield data:', err);
-        res.status(500).json({ error: 'Server error during yield data upload.', details: err.message });
+        res
+            .status(500)
+            .json({ error: 'Server error during yield data upload.', details: err.message });
     }
 });
 

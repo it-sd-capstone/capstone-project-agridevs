@@ -3,6 +3,8 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const UploadPage = () => {
+    const [fieldName, setFieldName] = useState('');
+
     const [costs, setCosts] = useState({
         fertilizer_cost: '',
         seed_cost: '',
@@ -10,25 +12,31 @@ const UploadPage = () => {
         misc_cost: '',
         crop_price: '',
     });
+
     const [file, setFile] = useState(null);
+
     const [error, setError] = useState(null);
+
     const navigate = useNavigate();
 
+    // Handle changes to the file input
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
     };
 
+    // Handle changes to the cost inputs
     const handleCostChange = (e) => {
         setCosts({ ...costs, [e.target.name]: e.target.value });
     };
 
+    // Handle the upload process
     const handleUpload = async () => {
         if (!file) {
             setError('Please select a file to upload.');
             return;
         }
 
-        // Validate cost inputs
+        // Validate that all cost fields are filled
         for (const key in costs) {
             if (costs[key] === '') {
                 setError('Please fill in all cost fields.');
@@ -36,13 +44,20 @@ const UploadPage = () => {
             }
         }
 
+        // Validate that the field name is provided
+        if (!fieldName) {
+            setError('Please provide a field name.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('field_name', fieldName);
 
         try {
             setError(null);
             const token = localStorage.getItem('token');
-            console.log('JWT Token:', token); // Log the token for debugging
+            console.log('JWT Token:', token);
 
             if (!token) {
                 console.error('No token found. Redirecting to login page.');
@@ -64,19 +79,20 @@ const UploadPage = () => {
 
             const fieldId = yieldDataResponse.data.fieldId;
 
-            // Submit costs
+            // Submit costs along with the field ID
             const costsWithFieldId = { ...costs, fieldId };
             await axios.post(
                 `${process.env.REACT_APP_API_BASE_URL}/costs/submit`,
                 costsWithFieldId,
                 {
                     headers: {
+                        'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`,
                     },
                 }
             );
 
-            // Calculate profit
+            // Calculate profit for the field
             await axios.post(
                 `${process.env.REACT_APP_API_BASE_URL}/profit/calculate/${fieldId}`,
                 null,
@@ -113,6 +129,16 @@ const UploadPage = () => {
         <div className="upload-page">
             <h2>Upload Yield Data and Enter Costs</h2>
             {error && <p className="error-message">{error}</p>}
+            <div className="form-group">
+                <label>Field Name:</label>
+                <input
+                    type="text"
+                    name="field_name"
+                    placeholder="Field Name"
+                    value={fieldName}
+                    onChange={(e) => setFieldName(e.target.value)}
+                />
+            </div>
             <div className="form-group">
                 <label>Upload Yield CSV File:</label>
                 <input type="file" onChange={handleFileChange} accept=".csv" />
