@@ -6,7 +6,6 @@ import MapView from './components/MapView';
 import Register from './components/Register';
 import Login from './components/Login';
 import Navbar from './components/Navbar';
-import 'leaflet/dist/leaflet.css';
 
 function App() {
     return (
