@@ -1,11 +1,19 @@
 const jwt = require('jsonwebtoken');
 
 function authenticateToken(req, res, next) {
+    console.log('authenticateToken middleware called');
     const authHeader = req.headers['authorization'];
     console.log('Authorization Header:', authHeader); // Log the header
 
+    if (!authHeader) {
+        console.error('No Authorization header found');
+        return res.sendStatus(401); // Unauthorized
+    }
+
     const token = authHeader && authHeader.split(' ')[1];
-    if (token == null) {
+    console.log('Extracted Token:', token); // Log the token
+
+    if (!token) {
         console.error('No token provided');
         return res.sendStatus(401); // Unauthorized
     }
