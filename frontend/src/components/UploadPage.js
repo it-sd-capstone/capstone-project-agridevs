@@ -42,6 +42,8 @@ const UploadPage = () => {
         try {
             setError(null);
             const token = localStorage.getItem('token');
+            console.log('JWT Token:', token); // Log the token for debugging
+
             if (!token) {
                 console.error('No token found. Redirecting to login page.');
                 navigate('/login');
@@ -55,7 +57,7 @@ const UploadPage = () => {
                 {
                     headers: {
                         'Content-Type': 'multipart/form-data',
-                        Authorization: `Bearer ${token}`,
+                        Authorization: `Bearer ${token}`, // Ensure 'Bearer' prefix is included
                     },
                 }
             );
@@ -89,7 +91,21 @@ const UploadPage = () => {
             navigate('/map');
         } catch (err) {
             console.error('Error uploading data:', err);
-            setError('An error occurred while uploading data and generating the profit map.');
+
+            if (err.response) {
+                // The request was made, and the server responded with a status code
+                console.error('Response data:', err.response.data);
+                console.error('Response status:', err.response.status);
+                setError(`Error: ${err.response.data.error || 'Failed to upload data.'}`);
+            } else if (err.request) {
+                // The request was made, but no response was received
+                console.error('Request made but no response:', err.request);
+                setError('No response from server. Please try again later.');
+            } else {
+                // Something else happened
+                console.error('Error:', err.message);
+                setError('An error occurred. Please try again.');
+            }
         }
     };
 

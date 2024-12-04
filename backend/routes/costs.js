@@ -3,26 +3,50 @@ const router = express.Router();
 const pool = require('../db');
 const authenticateToken = require('../utils/authMiddleware');
 
+// Submit Costs
 router.post('/submit', authenticateToken, async (req, res) => {
-    const { fieldId, fertilizerCost, seedCost, maintenanceCost, miscCost, cropPrice } = req.body;
+    const userId = req.user.userId;
+    const {
+        fieldId,
+        fertilizer_cost,
+        seed_cost,
+        maintenance_cost,
+        misc_cost,
+        crop_price,
+    } = req.body;
 
-    // Validate input
-    if (!fieldId || !fertilizerCost || !seedCost || !maintenanceCost || !miscCost || !cropPrice) {
+    // Basic validation
+    if (
+        !fieldId ||
+        fertilizer_cost === undefined ||
+        seed_cost === undefined ||
+        maintenance_cost === undefined ||
+        misc_cost === undefined ||
+        crop_price === undefined
+    ) {
         return res.status(400).json({ error: 'Please provide all cost fields.' });
     }
 
-    const totalCost = parseFloat(fertilizerCost) + parseFloat(seedCost) + parseFloat(maintenanceCost) + parseFloat(miscCost);
-
     try {
+        // Insert cost data into database
         await pool.query(
-            'INSERT INTO costs (field_id, fertilizer_cost, seed_cost, maintenance_cost, misc_cost, crop_price, total_cost, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())',
-            [fieldId, fertilizerCost, seedCost, maintenanceCost, miscCost, cropPrice, totalCost]
+            `INSERT INTO costs (field_id, user_id, fertilizer_cost, seed_cost, maintenance_cost, misc_cost, crop_price)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [
+                fieldId,
+                userId,
+                parseFloat(fertilizer_cost),
+                parseFloat(seed_cost),
+                parseFloat(maintenance_cost),
+                parseFloat(misc_cost),
+                parseFloat(crop_price),
+            ]
         );
 
-        res.send('Costs submitted successfully.');
+        res.json({ message: 'Cost data submitted successfully.' });
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Error submitting costs.');
+        console.error('Error submitting cost data:', err);
+        res.status(500).json({ error: 'Server error during cost data submission.', details: err.message });
     }
 });
 

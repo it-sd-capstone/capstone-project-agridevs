@@ -23,15 +23,15 @@ const createTables = async () => {
 
         // Create fields table
         await pool.query(`
-      CREATE TABLE fields (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        name VARCHAR(100) NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
+            CREATE TABLE fields (
+                                    id SERIAL PRIMARY KEY,
+                                    user_id INTEGER REFERENCES users(id),
+                                    name VARCHAR(100) NOT NULL,
+                                    created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
 
-// Create yield_data table
+        // Create yield_data table
         await pool.query(`
             CREATE TABLE yield_data (
                                         id SERIAL PRIMARY KEY,
@@ -46,28 +46,28 @@ const createTables = async () => {
 
         // Create costs table
         await pool.query(`
-      CREATE TABLE costs (
-        id SERIAL PRIMARY KEY,
-        field_id INTEGER REFERENCES fields(id),
-        fertilizer_cost DOUBLE PRECISION NOT NULL,
-        seed_cost DOUBLE PRECISION NOT NULL,
-        maintenance_cost DOUBLE PRECISION NOT NULL,
-        misc_cost DOUBLE PRECISION NOT NULL,
-        crop_price DOUBLE PRECISION NOT NULL,
-        total_cost DOUBLE PRECISION NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
+            CREATE TABLE costs (
+                                   id SERIAL PRIMARY KEY,
+                                   field_id INTEGER REFERENCES fields(id),
+                                   user_id INTEGER REFERENCES users(id),
+                                   fertilizer_cost DOUBLE PRECISION NOT NULL,
+                                   seed_cost DOUBLE PRECISION NOT NULL,
+                                   maintenance_cost DOUBLE PRECISION NOT NULL,
+                                   misc_cost DOUBLE PRECISION NOT NULL,
+                                   crop_price DOUBLE PRECISION NOT NULL,
+                                   created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
 
         // Create profits table
         await pool.query(`
-      CREATE TABLE profits (
-        id SERIAL PRIMARY KEY,
-        yield_data_id INTEGER REFERENCES yield_data(id),
-        profit DOUBLE PRECISION NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
+            CREATE TABLE profits (
+                                     id SERIAL PRIMARY KEY,
+                                     yield_data_id INTEGER REFERENCES yield_data(id),
+                                     profit DOUBLE PRECISION NOT NULL,
+                                     created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
 
         console.log('All tables created successfully!');
         process.exit(0);

@@ -3,7 +3,6 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const app = express();
-const pool = require('./db');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const costRoutes = require('./routes/costs');
@@ -12,8 +11,14 @@ const profitRoutes = require('./routes/profit');
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
 app.use(express.json());
+
+app.use(
+    cors({
+        origin: 'https://capstone-project-agridevs.onrender.com',
+        credentials: true,
+    })
+);
 
 // Routes
 app.use('/auth', authRoutes);

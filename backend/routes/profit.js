@@ -72,9 +72,9 @@ router.get('/geojson', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
             `SELECT yd.latitude, yd.longitude, p.profit
-       FROM yield_data yd
-       INNER JOIN profits p ON yd.id = p.yield_data_id
-       WHERE yd.user_id = $1`,
+             FROM yield_data yd
+                      INNER JOIN profits p ON yd.id = p.yield_data_id
+             WHERE yd.user_id = $1`,
             [userId]
         );
 

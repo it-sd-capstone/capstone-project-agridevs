@@ -31,6 +31,8 @@ const MapView = () => {
         const fetchProfitData = async () => {
             try {
                 const token = localStorage.getItem('token');
+                console.log('JWT Token:', token); // Log the token for debugging
+
                 if (!token) {
                     console.error('No token found. Redirecting to login page.');
                     navigate('/login');
@@ -39,7 +41,7 @@ const MapView = () => {
 
                 const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/profit/geojson`, {
                     headers: {
-                        Authorization: `Bearer ${token}`,
+                        Authorization: `Bearer ${token}`, // Ensure 'Bearer' prefix is included
                     },
                 });
 
@@ -54,9 +56,15 @@ const MapView = () => {
                 }
             } catch (error) {
                 console.error('Error fetching GeoJSON data:', error);
-                setError(
-                    'An error occurred while fetching the profit data. Please try again later.'
-                );
+
+                if (error.response && error.response.status === 401) {
+                    // Unauthorized access - redirect to login
+                    navigate('/login');
+                } else {
+                    setError(
+                        'An error occurred while fetching the profit data. Please try again later.'
+                    );
+                }
             }
         };
 

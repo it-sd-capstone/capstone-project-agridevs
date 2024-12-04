@@ -24,8 +24,8 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
     try {
         // Insert new field record
         const fieldResult = await pool.query(
-            'INSERT INTO fields (user_id, name) VALUES ($1, $2) RETURNING id',
-            [userId, 'New Field']
+            'INSERT INTO fields (user_id) VALUES ($1) RETURNING id',
+            [userId]
         );
 
         const fieldId = fieldResult.rows[0].id;
@@ -34,32 +34,36 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
         const yieldData = [];
         fs.createReadStream(filePath)
             .pipe(csvParser())
+            .on('error', (err) => {
+                console.error('Error reading CSV file:', err);
+                fs.unlinkSync(filePath); // Delete the file if there's an error
+                res.status(500).json({ error: 'Error reading CSV file.', details: err.message });
+            })
             .on('data', (row) => {
-                // Extract necessary fields from the CSV
-                if (
-                    row['Longitude'] &&
-                    row['Latitude'] &&
-                    row['Yld Vol(Dry)(bu/ac)']
-                ) {
+                // Validate and parse data
+                const latitude = parseFloat(row.latitude);
+                const longitude = parseFloat(row.longitude);
+                const yieldVolume = parseFloat(row.yield_volume);
+
+                if (isNaN(latitude) || isNaN(longitude) || isNaN(yieldVolume)) {
+                    console.error('Invalid data in CSV row:', row);
+                    // Optionally, you can skip this row or handle it differently
+                } else {
                     yieldData.push({
                         field_id: fieldId,
                         user_id: userId,
-                        latitude: parseFloat(row['Latitude']),
-                        longitude: parseFloat(row['Longitude']),
-                        yield_volume: parseFloat(row['Yld Vol(Dry)(bu/ac)']),
+                        latitude: latitude,
+                        longitude: longitude,
+                        yield_volume: yieldVolume,
                     });
                 }
             })
             .on('end', async () => {
                 try {
-                    if (yieldData.length === 0) {
-                        throw new Error('No valid data found in the CSV file');
-                    }
-
                     // Insert yield data into the database
                     const insertPromises = yieldData.map((data) =>
                         pool.query(
-                            'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume, created_at) VALUES ($1, $2, $3, $4, $5, NOW())',
+                            'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume) VALUES ($1, $2, $3, $4, $5)',
                             [data.field_id, data.user_id, data.latitude, data.longitude, data.yield_volume]
                         )
                     );
@@ -71,17 +75,14 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
 
                     res.json({ message: 'Yield data uploaded successfully.', fieldId });
                 } catch (err) {
-                    console.error('Error inserting yield data:', err);
-                    res.status(500).json({ error: 'Server error during yield data insertion.' });
+                    console.error('Error inserting yield data into database:', err);
+                    fs.unlinkSync(filePath);
+                    res.status(500).json({ error: 'Error inserting yield data into database.', details: err.message });
                 }
-            })
-            .on('error', (err) => {
-                console.error('Error reading CSV file:', err);
-                res.status(500).json({ error: 'Error processing CSV file.' });
             });
     } catch (err) {
         console.error('Error uploading yield data:', err);
-        res.status(500).json({ error: 'Server error during yield data upload.' });
+        res.status(500).json({ error: 'Server error during yield data upload.', details: err.message });
     }
 });
 
