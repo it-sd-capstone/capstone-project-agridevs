@@ -1,21 +1,19 @@
-.map-view {
+.map-container {
     position: relative;
-    height: 100vh;
-    width: 100%;
-}
-
-.map-view .mapboxgl-map {
-    border-radius: 8px;
-    overflow: hidden;
     height: 100%;
     width: 100%;
 }
 
-.map-view .back-button {
+.leaflet-container {
+    height: 100%;
+    width: 100%;
+}
+
+.back-button {
     position: absolute;
     top: 15px;
     left: 15px;
-    z-index: 10;
+    z-index: 1000;
     background-color: rgba(255, 255, 255, 0.9);
     border: none;
     padding: 10px;
@@ -25,43 +23,15 @@
     font-weight: bold;
 }
 
-.map-view .back-button:hover {
+.back-button:hover {
     background-color: rgba(255, 255, 255, 1);
 }
 
-.map-view .geojson-layer {
-    z-index: 5;
-}
-
-.map-view .map-controls {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.map-view .map-controls button {
-    background-color: #ffffff;
-    border: 1px solid #cccccc;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-    transition: background-color 0.3s;
-}
-
-.map-view .map-controls button:hover {
-    background-color: #f0f0f0;
-}
-
-.map-view .legend {
+.legend {
     position: absolute;
     bottom: 20px;
     right: 20px;
-    z-index: 10;
+    z-index: 1000;
     background-color: rgba(255, 255, 255, 0.8);
     padding: 10px;
     border-radius: 4px;
@@ -69,32 +39,34 @@
     font-size: 14px;
 }
 
-.map-view .legend-item {
+.legend-item {
     display: flex;
     align-items: center;
     margin-bottom: 5px;
 }
 
-.map-view .legend-item .color-box {
+.legend-item .color-box {
     width: 15px;
     height: 15px;
     margin-right: 5px;
     border-radius: 2px;
 }
 
+.error-message {
+    padding: 20px;
+    text-align: center;
+    font-size: 1.2rem;
+    color: red;
+}
+
 @media (max-width: 768px) {
-    .map-view .back-button {
+    .back-button {
         padding: 8px;
         top: 10px;
         left: 10px;
     }
 
-    .map-view .map-controls {
-        top: 10px;
-        right: 10px;
-    }
-
-    .map-view .legend {
+    .legend {
         bottom: 10px;
         right: 10px;
         padding: 8px;

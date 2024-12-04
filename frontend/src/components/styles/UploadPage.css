@@ -21,6 +21,8 @@
 .right-section {
     width: 100%;
     max-width: 48%;
+    box-sizing: border-box;
+    margin-bottom: 20px;
 }
 
 .left-section label,
@@ -67,4 +69,11 @@ button:hover {
 .error {
     text-align: center;
     margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+    .left-section,
+    .right-section {
+        max-width: 100%;
+    }
 }
