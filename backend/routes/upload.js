@@ -45,9 +45,9 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
             })
             .on('data', (row) => {
                 // Validate and parse data
-                const latitude = parseFloat(row.latitude);
-                const longitude = parseFloat(row.longitude);
-                const yieldVolume = parseFloat(row.yield_volume);
+                const latitude = parseFloat(row.Latitude || row.latitude);
+                const longitude = parseFloat(row.Longitude || row.longitude);
+                const yieldVolume = parseFloat(row['Yld Vol(Dry)(bu/ac)']);
 
                 if (isNaN(latitude) || isNaN(longitude) || isNaN(yieldVolume)) {
                     console.error('Invalid data in CSV row:', row);
@@ -63,15 +63,25 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
             })
             .on('end', async () => {
                 try {
-                    // Insert yield data into the database
-                    const insertPromises = yieldData.map((data) =>
-                        pool.query(
-                            'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume) VALUES ($1, $2, $3, $4, $5)',
-                            [data.field_id, data.user_id, data.latitude, data.longitude, data.yield_volume]
-                        )
-                    );
+                    if (yieldData.length === 0) {
+                        fs.unlinkSync(filePath);
+                        return res.status(400).json({ error: 'No valid yield data found in the CSV file.' });
+                    }
 
-                    await Promise.all(insertPromises);
+                    // Prepare a bulk insert query
+                    const queryText =
+                        'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume) VALUES ' +
+                        yieldData.map((_, i) => `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`).join(', ');
+
+                    const queryValues = yieldData.flatMap((data) => [
+                        data.field_id,
+                        data.user_id,
+                        data.latitude,
+                        data.longitude,
+                        data.yield_volume,
+                    ]);
+
+                    await pool.query(queryText, queryValues);
 
                     // Delete the uploaded file
                     fs.unlinkSync(filePath);
@@ -80,16 +90,12 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                 } catch (err) {
                     console.error('Error inserting yield data into database:', err);
                     fs.unlinkSync(filePath);
-                    res
-                        .status(500)
-                        .json({ error: 'Error inserting yield data into database.', details: err.message });
+                    res.status(500).json({ error: 'Error inserting yield data into database.', details: err.message });
                 }
             });
     } catch (err) {
         console.error('Error uploading yield data:', err);
-        res
-            .status(500)
-            .json({ error: 'Server error during yield data upload.', details: err.message });
+        res.status(500).json({ error: 'Server error during yield data upload.', details: err.message });
     }
 });
 

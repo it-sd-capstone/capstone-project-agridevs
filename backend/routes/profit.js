@@ -33,15 +33,17 @@ router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'No cost data found for the specified field.' });
         }
 
+        // Calculate total cost
+        const totalCost =
+            parseFloat(costData.fertilizer_cost) +
+            parseFloat(costData.seed_cost) +
+            parseFloat(costData.maintenance_cost) +
+            parseFloat(costData.misc_cost);
+
         // Calculate profit for each yield data entry
         const profitInsertPromises = yieldData.map(async (data) => {
             try {
-                const revenue = data.yield_volume * costData.crop_price;
-                const totalCost =
-                    costData.fertilizer_cost +
-                    costData.seed_cost +
-                    costData.maintenance_cost +
-                    costData.misc_cost;
+                const revenue = data.yield_volume * parseFloat(costData.crop_price);
                 const profit = revenue - totalCost;
 
                 // Insert profit into the profits table
@@ -78,14 +80,18 @@ router.get('/geojson', authenticateToken, async (req, res) => {
             [userId]
         );
 
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No profit data found for the user.' });
+        }
+
         const features = result.rows.map((row) => ({
             type: 'Feature',
             properties: {
-                profit: row.profit,
+                profit: parseFloat(row.profit),
             },
             geometry: {
                 type: 'Point',
-                coordinates: [row.longitude, row.latitude],
+                coordinates: [parseFloat(row.longitude), parseFloat(row.latitude)],
             },
         }));
 
