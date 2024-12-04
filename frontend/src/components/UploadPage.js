@@ -3,7 +3,13 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const UploadPage = () => {
-    const [costs, setCosts] = useState({ fertilizer: '', seed: '', maintenance: '', misc: '', cropPrice: '' });
+    const [costs, setCosts] = useState({
+        fertilizer_cost: '',
+        seed_cost: '',
+        maintenance_cost: '',
+        misc_cost: '',
+        crop_price: '',
+    });
     const [file, setFile] = useState(null);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
@@ -22,28 +28,65 @@ const UploadPage = () => {
             return;
         }
 
+        // Validate cost inputs
+        for (const key in costs) {
+            if (costs[key] === '') {
+                setError('Please fill in all cost fields.');
+                return;
+            }
+        }
+
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('fertilizer_cost', costs.fertilizer);
-        formData.append('seed_cost', costs.seed);
-        formData.append('maintenance_cost', costs.maintenance);
-        formData.append('misc_cost', costs.misc);
-        formData.append('crop_price', costs.cropPrice);
 
         try {
             setError(null);
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error('No token found. Redirecting to login page.');
+                navigate('/login');
+                return;
+            }
+
             // Upload yield data
-            const response = await axios.post('/upload/yield-data', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            const yieldDataResponse = await axios.post(
+                `${process.env.REACT_APP_API_BASE_URL}/upload/yield-data`,
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            const fieldId = yieldDataResponse.data.fieldId;
+
+            // Submit costs
+            const costsWithFieldId = { ...costs, fieldId };
+            await axios.post(
+                `${process.env.REACT_APP_API_BASE_URL}/costs/submit`,
+                costsWithFieldId,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
 
             // Calculate profit
-            await axios.post(`/calculate/${response.data.fieldId}`);
+            await axios.post(
+                `${process.env.REACT_APP_API_BASE_URL}/profit/calculate/${fieldId}`,
+                null,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
 
             // Navigate to the map page after successful profit calculation
-            navigate('/view-map');
+            navigate('/map');
         } catch (err) {
             console.error('Error uploading data:', err);
             setError('An error occurred while uploading data and generating the profit map.');
@@ -56,47 +99,49 @@ const UploadPage = () => {
             {error && <p className="error-message">{error}</p>}
             <div className="form-group">
                 <label>Upload Yield CSV File:</label>
-                <input type="file" onChange={handleFileChange} />
+                <input type="file" onChange={handleFileChange} accept=".csv" />
             </div>
             <div className="form-group">
                 <label>Enter Costs:</label>
                 <input
                     type="number"
-                    name="fertilizer"
+                    name="fertilizer_cost"
                     placeholder="Fertilizer Cost"
-                    value={costs.fertilizer}
+                    value={costs.fertilizer_cost}
                     onChange={handleCostChange}
                 />
                 <input
                     type="number"
-                    name="seed"
+                    name="seed_cost"
                     placeholder="Seed Cost"
-                    value={costs.seed}
+                    value={costs.seed_cost}
                     onChange={handleCostChange}
                 />
                 <input
                     type="number"
-                    name="maintenance"
+                    name="maintenance_cost"
                     placeholder="Maintenance Cost"
-                    value={costs.maintenance}
+                    value={costs.maintenance_cost}
                     onChange={handleCostChange}
                 />
                 <input
                     type="number"
-                    name="misc"
+                    name="misc_cost"
                     placeholder="Miscellaneous Cost"
-                    value={costs.misc}
+                    value={costs.misc_cost}
                     onChange={handleCostChange}
                 />
                 <input
                     type="number"
-                    name="cropPrice"
+                    name="crop_price"
                     placeholder="Crop Price per Bushel"
-                    value={costs.cropPrice}
+                    value={costs.crop_price}
                     onChange={handleCostChange}
                 />
             </div>
-            <button className="upload-button" onClick={handleUpload}>Generate Profit Map</button>
+            <button className="upload-button" onClick={handleUpload}>
+                Generate Profit Map
+            </button>
         </div>
     );
 };
