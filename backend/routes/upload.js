@@ -21,6 +21,9 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
     const userId = req.user.userId;
     const filePath = req.file.path;
 
+    console.log('Received request to /upload/yield-data');
+    console.log('User ID:', req.user.userId);
+
     try {
         // Insert new field record
         const fieldResult = await pool.query(

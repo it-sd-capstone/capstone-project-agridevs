@@ -17,6 +17,7 @@ app.use(
     cors({
         origin: 'https://capstone-project-agridevs.onrender.com',
         credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization'],
     })
 );
 
