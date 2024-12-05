@@ -1,6 +1,7 @@
 const db = require('../db');
-const csvParser = require('csv-parser'); // Install this package
+const csvParser = require('csv-parser');
 const fs = require('fs');
+const path = require('path');
 
 exports.getFieldBoundary = async (req, res) => {
     const userId = req.user.id;
@@ -9,10 +10,10 @@ exports.getFieldBoundary = async (req, res) => {
     try {
         const result = await db.query(
             `
-            SELECT latitude, longitude
-            FROM field_boundary
-            WHERE user_id = $1 AND field_id = $2
-            ORDER BY point_order;
+                SELECT latitude, longitude
+                FROM field_boundary
+                WHERE user_id = $1 AND field_id = $2
+                ORDER BY point_order;
             `,
             [userId, fieldId]
         );
@@ -75,15 +76,11 @@ exports.uploadFieldBoundary = async (req, res) => {
     const userId = req.user.id;
     const fieldId = req.body.fieldId;
 
-    if (!req.files || !req.files.boundaryFile) {
+    if (!req.file) {
         return res.status(400).json({ error: 'No boundary file uploaded.' });
     }
 
-    const boundaryFile = req.files.boundaryFile;
-    const filePath = `./uploads/${boundaryFile.name}`;
-
-    // Save the file temporarily
-    await boundaryFile.mv(filePath);
+    const filePath = req.file.path;
 
     const boundaryPoints = [];
 
@@ -93,33 +90,44 @@ exports.uploadFieldBoundary = async (req, res) => {
             .on('data', (row) => {
                 const latitude = parseFloat(row.latitude || row.Latitude);
                 const longitude = parseFloat(row.longitude || row.Longitude);
-                boundaryPoints.push({ latitude, longitude });
+                if (!isNaN(latitude) && !isNaN(longitude)) {
+                    boundaryPoints.push({ latitude, longitude });
+                }
             })
             .on('end', async () => {
-                // Insert boundary points into the database
-                for (let i = 0; i < boundaryPoints.length; i++) {
-                    const { latitude, longitude } = boundaryPoints[i];
-                    const point_order = i + 1;
+                try {
+                    // Insert boundary points into the database
+                    for (let i = 0; i < boundaryPoints.length; i++) {
+                        const { latitude, longitude } = boundaryPoints[i];
+                        const point_order = i + 1;
 
-                    await db.query(
-                        `
-                        INSERT INTO field_boundary (field_id, user_id, latitude, longitude, point_order)
-                        VALUES ($1, $2, $3, $4, $5)
-                        ON CONFLICT (field_id, point_order) DO UPDATE
-                        SET latitude = EXCLUDED.latitude,
-                            longitude = EXCLUDED.longitude;
-                        `,
-                        [fieldId, userId, latitude, longitude, point_order]
-                    );
+                        await db.query(
+                            `
+                            INSERT INTO field_boundary (field_id, user_id, latitude, longitude, point_order)
+                            VALUES ($1, $2, $3, $4, $5)
+                            ON CONFLICT (field_id, point_order) DO UPDATE
+                            SET latitude = EXCLUDED.latitude,
+                                longitude = EXCLUDED.longitude;
+                            `,
+                            [fieldId, userId, latitude, longitude, point_order]
+                        );
+                    }
+
+                    // Delete the temporary file
+                    fs.unlinkSync(filePath);
+
+                    res.status(200).json({ message: 'Field boundary data uploaded successfully.' });
+                } catch (err) {
+                    console.error('Error inserting boundary data into database:', err);
+                    res.status(500).json({ error: 'Error inserting boundary data into database.' });
                 }
-
-                // Delete the temporary file
-                fs.unlinkSync(filePath);
-
-                res.status(200).json({ message: 'Field boundary data uploaded successfully.' });
+            })
+            .on('error', (err) => {
+                console.error('Error reading boundary CSV file:', err);
+                res.status(500).json({ error: 'Error reading boundary CSV file.' });
             });
     } catch (error) {
-        console.error('Error uploading field boundary data:', error);
+        console.error('Error processing field boundary data:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };

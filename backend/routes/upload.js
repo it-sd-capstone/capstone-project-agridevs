@@ -9,18 +9,25 @@ const fs = require('fs');
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
-    destination: './uploads/',
+    destination: function (req, file, cb) {
+        const uploadDir = './uploads';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir);
+        }
+        cb(null, uploadDir);
+    },
     filename: function (req, file, cb) {
         cb(null, 'yield_data_' + Date.now() + path.extname(file.originalname));
     },
 });
+
 const upload = multer({ storage: storage });
 
 // Upload yield data CSV file
 router.post('/yield-data', authenticateToken, upload.single('file'), async (req, res) => {
-    const userId = req.user.userId;
+    const userId = req.user.id; // Fixed to use req.user.id
     const filePath = req.file.path;
-    const fieldName = req.body.field_name || 'Default Field Name'; // Get the field name from the request
+    const fieldName = req.body.field_name || 'Default Field Name';
 
     console.log('Received request to /upload/yield-data');
     console.log('User ID:', userId);
@@ -47,7 +54,7 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                 // Validate and parse data
                 const latitude = parseFloat(row.Latitude || row.latitude);
                 const longitude = parseFloat(row.Longitude || row.longitude);
-                const yieldVolume = parseFloat(row['Yld Vol(Dry)(bu/ac)']);
+                const yieldVolume = parseFloat(row['Yld Vol(Dry)(bu/ac)'] || row.yield_volume);
 
                 if (isNaN(latitude) || isNaN(longitude) || isNaN(yieldVolume)) {
                     console.error('Invalid data in CSV row:', row);
@@ -69,19 +76,26 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                     }
 
                     // Prepare a bulk insert query
-                    const queryText =
-                        'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume) VALUES ' +
-                        yieldData.map((_, i) => `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`).join(', ');
+                    const values = [];
+                    const placeholders = [];
+                    yieldData.forEach((data, index) => {
+                        const idx = index * 5;
+                        placeholders.push(`($${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5})`);
+                        values.push(
+                            data.field_id,
+                            data.user_id,
+                            data.latitude,
+                            data.longitude,
+                            data.yield_volume
+                        );
+                    });
 
-                    const queryValues = yieldData.flatMap((data) => [
-                        data.field_id,
-                        data.user_id,
-                        data.latitude,
-                        data.longitude,
-                        data.yield_volume,
-                    ]);
+                    const queryText = `
+                        INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume)
+                        VALUES ${placeholders.join(', ')}
+                    `;
 
-                    await pool.query(queryText, queryValues);
+                    await pool.query(queryText, values);
 
                     // Delete the uploaded file
                     fs.unlinkSync(filePath);

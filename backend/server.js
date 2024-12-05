@@ -3,7 +3,6 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const app = express();
-const fileUpload = require('express-fileupload');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const costRoutes = require('./routes/costs');
@@ -22,11 +21,6 @@ app.use(
         allowedHeaders: ['Content-Type', 'Authorization'],
     })
 );
-
-app.use(fileUpload({
-    limits: { fileSize: 1000 * 1024 * 1024 },
-    abortOnLimit: true,
-}));
 
 // Routes
 app.use('/auth', authRoutes);
