@@ -6,11 +6,16 @@ const jwt = require('jsonwebtoken');
 
 // User registration
 router.post('/register', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, email, password } = req.body;
 
     try {
+        // Input validation
+        if (!username || !email || !password) {
+            return res.status(400).json({ error: 'Please provide username, email, and password.' });
+        }
+
         // Check if user already exists
-        const userExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
         if (userExists.rows.length > 0) {
             return res.status(400).json({ error: 'User already exists.' });
@@ -20,7 +25,10 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert new user
-        await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
+        await pool.query(
+            'INSERT INTO users (username, email, password) VALUES ($1, $2, $3)',
+            [username, email, hashedPassword]
+        );
 
         res.status(201).json({ message: 'User registered successfully.' });
     } catch (err) {
@@ -31,22 +39,27 @@ router.post('/register', async (req, res) => {
 
 // User login
 router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
     try {
-        // Fetch user
-        const userResult = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        // Input validation
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Please provide email and password.' });
+        }
+
+        // Fetch user by email
+        const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = userResult.rows[0];
 
         if (!user) {
-            return res.status(400).json({ error: 'Invalid username or password.' });
+            return res.status(400).json({ error: 'Invalid email or password.' });
         }
 
         // Compare passwords
         const validPassword = await bcrypt.compare(password, user.password);
 
         if (!validPassword) {
-            return res.status(400).json({ error: 'Invalid username or password.' });
+            return res.status(400).json({ error: 'Invalid email or password.' });
         }
 
         // Generate JWT token
