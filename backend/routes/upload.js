@@ -6,6 +6,7 @@ const authenticateToken = require('../utils/authMiddleware');
 const path = require('path');
 const csvParser = require('csv-parser');
 const fs = require('fs');
+const convexHull = require('convex-hull'); // Install this package
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
@@ -25,7 +26,7 @@ const upload = multer({ storage: storage });
 
 // Upload yield data CSV file
 router.post('/yield-data', authenticateToken, upload.single('file'), async (req, res) => {
-    const userId = req.user.id; // Fixed to use req.user.id
+    const userId = req.user.id; // Corrected to use req.user.id
     const filePath = req.file.path;
     const fieldName = req.body.field_name || 'Default Field Name';
 
@@ -96,6 +97,29 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                     `;
 
                     await pool.query(queryText, values);
+
+                    // Compute field boundary using convex hull
+                    const points = yieldData.map(data => [data.longitude, data.latitude]);
+                    const hullIndices = convexHull(points);
+
+                    const boundaryPoints = hullIndices.map(hull => points[hull[0]]);
+
+                    // Insert boundary points into the database
+                    for (let i = 0; i < boundaryPoints.length; i++) {
+                        const [longitude, latitude] = boundaryPoints[i];
+                        const point_order = i + 1;
+
+                        await pool.query(
+                            `
+                            INSERT INTO field_boundary (field_id, user_id, latitude, longitude, point_order)
+                            VALUES ($1, $2, $3, $4, $5)
+                            ON CONFLICT (field_id, point_order) DO UPDATE
+                            SET latitude = EXCLUDED.latitude,
+                                longitude = EXCLUDED.longitude;
+                            `,
+                            [fieldId, userId, latitude, longitude, point_order]
+                        );
+                    }
 
                     // Delete the uploaded file
                     fs.unlinkSync(filePath);

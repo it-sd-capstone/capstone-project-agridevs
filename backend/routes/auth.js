@@ -1,21 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const pool = require('../db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const pool = require('../db');
 
-// Register User
+// User registration
 router.post('/register', async (req, res) => {
-    const { username, email, password } = req.body;
-
-    // Basic validation
-    if (!username || !email || !password) {
-        return res.status(400).json({ error: 'Please enter all fields.' });
-    }
+    const { username, password } = req.body;
 
     try {
-        // Check if user exists
-        const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        // Check if user already exists
+        const userExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+
         if (userExists.rows.length > 0) {
             return res.status(400).json({ error: 'User already exists.' });
         }
@@ -23,54 +19,40 @@ router.post('/register', async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insert user into database
-        const newUser = await pool.query(
-            'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',
-            [username, email, hashedPassword]
-        );
+        // Insert new user
+        await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
 
-        // Create JWT token
-        const token = jwt.sign({ userId: newUser.rows[0].id }, process.env.JWT_SECRET, {
-            expiresIn: '24h',
-        });
-
-        res.json({ token, user: newUser.rows[0] });
+        res.status(201).json({ message: 'User registered successfully.' });
     } catch (err) {
-        console.error('Error during registration:', err);
+        console.error('Error registering user:', err);
         res.status(500).json({ error: 'Server error during registration.', details: err.message });
     }
 });
 
-// Login User
+// User login
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-
-    // Basic validation
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Please enter all fields.' });
-    }
+    const { username, password } = req.body;
 
     try {
-        // Check if user exists
-        const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userResult.rows.length === 0) {
-            return res.status(400).json({ error: 'User does not exist.' });
-        }
-
+        // Fetch user
+        const userResult = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
         const user = userResult.rows[0];
 
-        // Compare passwords
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ error: 'Invalid credentials.' });
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid username or password.' });
         }
 
-        // Create JWT token
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-            expiresIn: '24h',
-        });
+        // Compare passwords
+        const validPassword = await bcrypt.compare(password, user.password);
 
-        res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
+        if (!validPassword) {
+            return res.status(400).json({ error: 'Invalid username or password.' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+        res.json({ token });
     } catch (err) {
         console.error('Error during login:', err);
         res.status(500).json({ error: 'Server error during login.', details: err.message });

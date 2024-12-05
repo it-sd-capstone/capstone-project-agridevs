@@ -6,7 +6,7 @@ const authenticateToken = require('../utils/authMiddleware');
 // Calculate and insert profit data
 router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
     const { fieldId } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user.id; // Corrected to use req.user.id
 
     try {
         // Fetch yield data for the specified field
@@ -64,46 +64,6 @@ router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Error calculating profit:', err);
         res.status(500).json({ error: 'Server error during profit calculation.', details: err.message });
-    }
-});
-
-// Endpoint to get GeoJSON data for the map
-router.get('/geojson', authenticateToken, async (req, res) => {
-    const userId = req.user.userId;
-
-    try {
-        const result = await pool.query(
-            `SELECT yd.latitude, yd.longitude, p.profit
-             FROM yield_data yd
-                      INNER JOIN profits p ON yd.id = p.yield_data_id
-             WHERE yd.user_id = $1`,
-            [userId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'No profit data found for the user.' });
-        }
-
-        const features = result.rows.map((row) => ({
-            type: 'Feature',
-            properties: {
-                profit: parseFloat(row.profit),
-            },
-            geometry: {
-                type: 'Point',
-                coordinates: [parseFloat(row.longitude), parseFloat(row.latitude)],
-            },
-        }));
-
-        const geojson = {
-            type: 'FeatureCollection',
-            features: features,
-        };
-
-        res.json(geojson);
-    } catch (err) {
-        console.error('Error fetching GeoJSON data:', err);
-        res.status(500).json({ error: 'Failed to fetch GeoJSON data.', details: err.message });
     }
 });
 

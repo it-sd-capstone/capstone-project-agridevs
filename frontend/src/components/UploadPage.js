@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import './styles/UploadPage.css';
+import './components/styles/UploadPage.css';
 
 const UploadPage = () => {
     const [fieldName, setFieldName] = useState('');
@@ -15,19 +15,14 @@ const UploadPage = () => {
     });
 
     const [file, setFile] = useState(null);
-    const [boundaryFile, setBoundaryFile] = useState(null);
 
     const [error, setError] = useState(null);
 
     const navigate = useNavigate();
 
-    // Handle changes to the file inputs
+    // Handle changes to the file input
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
-    };
-
-    const handleBoundaryFileChange = (e) => {
-        setBoundaryFile(e.target.files[0]);
     };
 
     // Handle changes to the cost inputs
@@ -39,11 +34,6 @@ const UploadPage = () => {
     const handleUpload = async () => {
         if (!file) {
             setError('Please select a yield data file to upload.');
-            return;
-        }
-
-        if (!boundaryFile) {
-            setError('Please select a field boundary file to upload.');
             return;
         }
 
@@ -89,22 +79,6 @@ const UploadPage = () => {
             );
 
             const fieldId = yieldDataResponse.data.fieldId;
-
-            // Upload field boundary data
-            const boundaryFormData = new FormData();
-            boundaryFormData.append('boundaryFile', boundaryFile);
-            boundaryFormData.append('fieldId', fieldId);
-
-            await axios.post(
-                `${process.env.REACT_APP_API_BASE_URL}/field/boundary`,
-                boundaryFormData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
 
             // Submit costs along with the field ID
             const costsWithFieldId = { ...costs, fieldId };
@@ -166,10 +140,6 @@ const UploadPage = () => {
             <div className="form-group">
                 <label>Upload Yield CSV File:</label>
                 <input type="file" onChange={handleFileChange} accept=".csv" />
-            </div>
-            <div className="form-group">
-                <label>Upload Field Boundary CSV File:</label>
-                <input type="file" onChange={handleBoundaryFileChange} accept=".csv" />
             </div>
             <div className="form-group">
                 <label>Enter Costs:</label>
