@@ -66,6 +66,7 @@ const UploadPage = () => {
             }
 
             // Upload yield data
+            console.log('Uploading yield data...');
             const yieldDataResponse = await axios.post(
                 `${process.env.REACT_APP_API_BASE_URL}/upload/yield-data`,
                 formData,
@@ -77,10 +78,15 @@ const UploadPage = () => {
                 }
             );
 
-            const fieldId = yieldDataResponse.data.fieldId;
+            const fieldId = yieldDataResponse.data.fieldId; // Ensure this value exists
+            console.log(`Received fieldId: ${fieldId}`);
+            if (!fieldId) {
+                throw new Error('Field ID was not returned by the server.');
+            }
 
             // Submit costs along with the field ID
             const costsWithFieldId = { ...costs, fieldId };
+            console.log('Submitting costs:', costsWithFieldId);
             await axios.post(
                 `${process.env.REACT_APP_API_BASE_URL}/costs/submit`,
                 costsWithFieldId,
@@ -93,6 +99,7 @@ const UploadPage = () => {
             );
 
             // Navigate to the map page after successful profit calculation
+            console.log(`Navigating to map page with fieldId: ${fieldId}`);
             navigate(`/map/${fieldId}`);
         } catch (err) {
             console.error('Error uploading data:', err);

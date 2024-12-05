@@ -6,7 +6,12 @@ const authenticateToken = require('../utils/authMiddleware');
 // Calculate and insert profit data
 router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
     const { fieldId } = req.params;
-    const userId = req.user.id; // Corrected to use req.user.id
+    const userId = req.user.id;
+
+    // Validate fieldId
+    if (!fieldId || isNaN(parseInt(fieldId))) {
+        return res.status(400).json({ error: 'Invalid or missing field ID.' });
+    }
 
     try {
         // Fetch yield data for the specified field
@@ -53,7 +58,7 @@ router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
                 );
             } catch (err) {
                 console.error(`Error inserting profit for yield data ID ${data.id}:`, err);
-                throw err; // Rethrow the error to be caught by the outer catch
+                throw err;
             }
         });
 
