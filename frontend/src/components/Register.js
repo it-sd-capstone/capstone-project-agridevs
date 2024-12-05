@@ -13,12 +13,10 @@ function Register() {
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
-    // Handle input changes
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -28,11 +26,7 @@ function Register() {
             navigate('/');
         } catch (err) {
             console.error('Registration error:', err);
-            if (err.response && err.response.data && err.response.data.error) {
-                setError(err.response.data.error);
-            } else {
-                setError('Registration failed. Please try again.');
-            }
+            setError(err.response?.data?.error || 'Registration failed. Please try again.');
         }
     };
 

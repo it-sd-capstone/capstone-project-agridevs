@@ -9,28 +9,24 @@ router.post('/register', async (req, res) => {
     const { username, email, password } = req.body;
 
     try {
-        // Input validation
         if (!username || !email || !password) {
             return res.status(400).json({ error: 'Please provide username, email, and password.' });
         }
 
-        // Check if user already exists
         const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-
         if (userExists.rows.length > 0) {
             return res.status(400).json({ error: 'User already exists.' });
         }
 
-        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Insert new user
-        await pool.query(
-            'INSERT INTO users (username, email, password) VALUES ($1, $2, $3)',
+        const newUser = await pool.query(
+            'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id',
             [username, email, hashedPassword]
         );
 
-        res.status(201).json({ message: 'User registered successfully.' });
+        const token = jwt.sign({ id: newUser.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+        res.status(201).json({ message: 'User registered successfully.', token });
     } catch (err) {
         console.error('Error registering user:', err);
         res.status(500).json({ error: 'Server error during registration.', details: err.message });
@@ -42,32 +38,21 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        // Input validation
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Please provide email and password.' });
-        }
+        const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
-        // Fetch user by email
-        const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        const user = userResult.rows[0];
-
-        if (!user) {
+        if (user.rows.length === 0) {
             return res.status(400).json({ error: 'Invalid email or password.' });
         }
 
-        // Compare passwords
-        const validPassword = await bcrypt.compare(password, user.password);
-
+        const validPassword = await bcrypt.compare(password, user.rows[0].password);
         if (!validPassword) {
             return res.status(400).json({ error: 'Invalid email or password.' });
         }
 
-        // Generate JWT token
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
-
-        res.json({ token });
+        const token = jwt.sign({ id: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+        res.status(200).json({ token });
     } catch (err) {
-        console.error('Error during login:', err);
+        console.error('Error logging in:', err);
         res.status(500).json({ error: 'Server error during login.', details: err.message });
     }
 });

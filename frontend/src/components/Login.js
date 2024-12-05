@@ -12,12 +12,10 @@ function Login() {
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
-    // Handle input changes
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -26,8 +24,8 @@ function Login() {
             localStorage.setItem('token', response.data.token);
             navigate('/');
         } catch (err) {
-            console.error(err);
-            setError('Login failed. Please check your credentials.');
+            console.error('Login error:', err);
+            setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
         }
     };
 

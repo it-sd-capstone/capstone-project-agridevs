@@ -5,7 +5,6 @@ import './styles/UploadPage.css';
 
 const UploadPage = () => {
     const [fieldName, setFieldName] = useState('');
-
     const [costs, setCosts] = useState({
         fertilizer_cost: '',
         seed_cost: '',
@@ -13,11 +12,9 @@ const UploadPage = () => {
         misc_cost: '',
         crop_price: '',
     });
-
     const [file, setFile] = useState(null);
-
     const [error, setError] = useState(null);
-
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
     // Handle changes to the file input
@@ -30,38 +27,40 @@ const UploadPage = () => {
         setCosts({ ...costs, [e.target.name]: e.target.value });
     };
 
-    // Handle the upload process
-    const handleUpload = async () => {
-        if (!file) {
-            setError('Please select a yield data file to upload.');
-            return;
+    // Validate all inputs
+    const validateInputs = () => {
+        if (!fieldName.trim()) {
+            setError('Field name is required.');
+            return false;
         }
-
-        // Validate that all cost fields are filled
-        for (const key in costs) {
-            if (costs[key] === '') {
-                setError('Please fill in all cost fields.');
-                return;
+        if (!file) {
+            setError('Please upload a yield data CSV file.');
+            return false;
+        }
+        for (const [key, value] of Object.entries(costs)) {
+            if (!value || isNaN(parseFloat(value))) {
+                setError(`Please provide a valid value for ${key.replace('_', ' ')}.`);
+                return false;
             }
         }
+        return true;
+    };
 
-        // Validate that the field name is provided
-        if (!fieldName) {
-            setError('Please provide a field name.');
-            return;
-        }
+    // Handle the upload process
+    const handleUpload = async () => {
+        if (!validateInputs()) return;
+
+        setIsLoading(true);
+        setError(null);
 
         const formData = new FormData();
         formData.append('file', file);
         formData.append('field_name', fieldName);
 
         try {
-            setError(null);
             const token = localStorage.getItem('token');
-            console.log('JWT Token:', token);
-
             if (!token) {
-                console.error('No token found. Redirecting to login page.');
+                setError('You must be logged in to upload data.');
                 navigate('/login');
                 return;
             }
@@ -93,33 +92,18 @@ const UploadPage = () => {
                 }
             );
 
-            // Calculate profit for the field
-            await axios.post(
-                `${process.env.REACT_APP_API_BASE_URL}/profit/calculate/${fieldId}`,
-                null,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
             // Navigate to the map page after successful profit calculation
             navigate(`/map/${fieldId}`);
         } catch (err) {
             console.error('Error uploading data:', err);
 
             if (err.response) {
-                console.error('Response data:', err.response.data);
-                console.error('Response status:', err.response.status);
-                setError(`Error: ${err.response.data.error || 'Failed to upload data.'}`);
-            } else if (err.request) {
-                console.error('Request made but no response:', err.request);
-                setError('No response from server. Please try again later.');
+                setError(err.response.data.error || 'An error occurred while uploading data.');
             } else {
-                console.error('Error:', err.message);
-                setError('An error occurred. Please try again.');
+                setError('An error occurred. Please check your internet connection and try again.');
             }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -179,8 +163,8 @@ const UploadPage = () => {
                     onChange={handleCostChange}
                 />
             </div>
-            <button className="upload-button" onClick={handleUpload}>
-                Generate Profit Map
+            <button className="upload-button" onClick={handleUpload} disabled={isLoading}>
+                {isLoading ? 'Uploading...' : 'Generate Profit Map'}
             </button>
         </div>
     );
