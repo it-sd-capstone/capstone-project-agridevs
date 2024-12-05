@@ -23,7 +23,10 @@ app.use(
     })
 );
 
-app.use(fileUpload());
+app.use(fileUpload({
+    limits: { fileSize: 1000 * 1024 * 1024 },
+    abortOnLimit: true,
+}));
 
 // Routes
 app.use('/auth', authRoutes);
