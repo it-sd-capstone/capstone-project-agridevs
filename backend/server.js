@@ -3,10 +3,12 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const app = express();
+const fileUpload = require('express-fileupload');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const costRoutes = require('./routes/costs');
 const profitRoutes = require('./routes/profit');
+const fieldRoutes = require('./routes/field');
 
 const PORT = process.env.PORT || 5000;
 
@@ -21,11 +23,14 @@ app.use(
     })
 );
 
+app.use(fileUpload());
+
 // Routes
 app.use('/auth', authRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/costs', costRoutes);
 app.use('/profit', profitRoutes);
+app.use('/field', fieldRoutes);
 
 // Serve frontend
 app.use(express.static(path.join(__dirname, 'build')));

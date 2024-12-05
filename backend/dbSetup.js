@@ -3,10 +3,11 @@ const pool = require('./db');
 
 const createTables = async () => {
     try {
-        // Drop tables if they exist
+        // Drop tables if they exist (adjust the order to respect foreign key constraints)
         await pool.query('DROP TABLE IF EXISTS profits CASCADE;');
         await pool.query('DROP TABLE IF EXISTS costs CASCADE;');
         await pool.query('DROP TABLE IF EXISTS yield_data CASCADE;');
+        await pool.query('DROP TABLE IF EXISTS field_boundary CASCADE;');
         await pool.query('DROP TABLE IF EXISTS fields CASCADE;');
         await pool.query('DROP TABLE IF EXISTS users CASCADE;');
 
@@ -31,11 +32,24 @@ const createTables = async () => {
             );
         `);
 
+        // Create field_boundary table
+        await pool.query(`
+            CREATE TABLE field_boundary (
+                                            id SERIAL PRIMARY KEY,
+                                            field_id INTEGER REFERENCES fields(id) ON DELETE CASCADE,
+                                            user_id INTEGER REFERENCES users(id),
+                                            latitude DOUBLE PRECISION NOT NULL,
+                                            longitude DOUBLE PRECISION NOT NULL,
+                                            point_order INTEGER NOT NULL,
+                                            UNIQUE (field_id, point_order)
+            );
+        `);
+
         // Create yield_data table
         await pool.query(`
             CREATE TABLE yield_data (
                                         id SERIAL PRIMARY KEY,
-                                        field_id INTEGER REFERENCES fields(id),
+                                        field_id INTEGER REFERENCES fields(id) ON DELETE CASCADE,
                                         user_id INTEGER REFERENCES users(id),
                                         longitude DOUBLE PRECISION NOT NULL,
                                         latitude DOUBLE PRECISION NOT NULL,
@@ -48,7 +62,7 @@ const createTables = async () => {
         await pool.query(`
             CREATE TABLE costs (
                                    id SERIAL PRIMARY KEY,
-                                   field_id INTEGER REFERENCES fields(id),
+                                   field_id INTEGER REFERENCES fields(id) ON DELETE CASCADE,
                                    user_id INTEGER REFERENCES users(id),
                                    fertilizer_cost DOUBLE PRECISION NOT NULL,
                                    seed_cost DOUBLE PRECISION NOT NULL,
@@ -62,10 +76,10 @@ const createTables = async () => {
         // Create profits table
         await pool.query(`
             CREATE TABLE profits (
-                                     id SERIAL PRIMARY KEY,
-                                     yield_data_id INTEGER REFERENCES yield_data(id),
-                                     profit DOUBLE PRECISION NOT NULL,
-                                     created_at TIMESTAMP DEFAULT NOW()
+                id SERIAL PRIMARY KEY,
+                yield_data_id INTEGER REFERENCES yield_data(id) ON DELETE CASCADE,
+                profit DOUBLE PRECISION NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
             );
         `);
 
