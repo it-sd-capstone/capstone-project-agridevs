@@ -1,143 +1,55 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import './styles/MapView.css';
-import FieldAverages from './FieldAverages'; // Import the new component
 
-const MapView = () => {
-    const [fieldBoundary, setFieldBoundary] = useState(null);
-    const [dataPoints, setDataPoints] = useState(null);
-    const canvasRef = useRef(null);
-    const navigate = useNavigate();
+const MapView = ({ fieldId }) => {
+    const [dataPoints, setDataPoints] = useState([]);
 
     useEffect(() => {
-        const fetchFieldData = async () => {
-            const token = localStorage.getItem('token');
-
-            if (!token) {
-                navigate('/login');
-                return;
-            }
-
+        const fetchDataPoints = async () => {
             try {
-                // Fetch field boundary
-                const boundaryResponse = await axios.get(
-                    `${process.env.REACT_APP_API_BASE_URL}/field/boundary`,
+                const token = localStorage.getItem('token');
+                const response = await axios.get(
+                    `${process.env.REACT_APP_API_BASE_URL}/field/${fieldId}/data-points`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`,
                         },
                     }
                 );
-                setFieldBoundary(boundaryResponse.data);
-
-                // Fetch data points with profit
-                const dataResponse = await axios.get(
-                    `${process.env.REACT_APP_API_BASE_URL}/field/data-points`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-                setDataPoints(dataResponse.data);
+                setDataPoints(response.data);
             } catch (error) {
-                console.error('Error fetching field data:', error);
-                // Handle errors as needed
+                console.error('Error fetching data points:', error);
             }
         };
 
-        fetchFieldData();
-    }, [navigate]);
+        fetchDataPoints();
+    }, [fieldId]);
 
-    useEffect(() => {
-        if (fieldBoundary && dataPoints) {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
+    // Function to map profit to a color
+    const getColorForProfit = (profit) => {
+        // Define a color scale based on profit values
+        // Adjust the range and colors as needed
+        if (profit < 0) return '#FF0000'; // Red for negative profit
+        if (profit < 100) return '#FFA500'; // Orange
+        if (profit < 200) return '#FFFF00'; // Yellow
+        return '#008000'; // Green for high profit
+    };
 
-            // Get bounding box
-            const lats = fieldBoundary.map(coord => coord.latitude);
-            const lons = fieldBoundary.map(coord => coord.longitude);
-            const minLat = Math.min(...lats);
-            const maxLat = Math.max(...lats);
-            const minLon = Math.min(...lons);
-            const maxLon = Math.max(...lons);
-
-            // Canvas dimensions
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-
-            // Helper functions to convert geo coords to canvas coords
-            const geoToCanvasX = lon => ((lon - minLon) / (maxLon - minLon)) * canvasWidth;
-            const geoToCanvasY = lat => canvasHeight - ((lat - minLat) / (maxLat - minLat)) * canvasHeight;
-
-            // Clear canvas
-            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
-            // Draw field boundary
-            ctx.beginPath();
-            fieldBoundary.forEach((point, index) => {
-                const x = geoToCanvasX(point.longitude);
-                const y = geoToCanvasY(point.latitude);
-                if (index === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            });
-            ctx.closePath();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.fillStyle = '#f9f9f9';
-            ctx.fill();
-
-            // Draw data points
-            dataPoints.forEach(point => {
-                const x = geoToCanvasX(point.longitude);
-                const y = geoToCanvasY(point.latitude);
-
-                // Determine color based on profit
-                let color;
-                if (point.profit > 0) {
-                    color = 'green';
-                } else if (point.profit < 0) {
-                    color = 'red';
-                } else {
-                    color = 'yellow';
-                }
-
-                ctx.beginPath();
-                ctx.arc(x, y, 3, 0, 2 * Math.PI);
-                ctx.fillStyle = color;
-                ctx.fill();
-            });
-        }
-    }, [fieldBoundary, dataPoints]);
-
+    // Render the data points on a canvas or map
     return (
-        <div className="map-view">
-            <h2>Field Visualization</h2>
-            <div className="canvas-container">
-                <canvas ref={canvasRef} width={800} height={600}></canvas>
-                {/* Legend */}
-                <div className="legend">
-                    <div className="legend-item">
-                        <div className="color-box" style={{ backgroundColor: 'green' }}></div>
-                        <span>Profit &gt; 0</span>
-                    </div>
-                    <div className="legend-item">
-                        <div className="color-box" style={{ backgroundColor: 'red' }}></div>
-                        <span>Profit &lt; 0</span>
-                    </div>
-                    <div className="legend-item">
-                        <div className="color-box" style={{ backgroundColor: 'yellow' }}></div>
-                        <span>Profit = 0</span>
-                    </div>
-                </div>
-            </div>
-            {/* Display average yield and profit */}
-            <FieldAverages />
+        <div className="map-container">
+            {/* Example using an HTML5 Canvas */}
+            <canvas id="profitCanvas" width="800" height="600"></canvas>
+            {/* Alternatively, use a mapping library like Leaflet or Mapbox GL JS */}
+            {/* For simplicity, here we just list the data points */}
+            <ul>
+                {dataPoints.map((point, index) => (
+                    <li key={index} style={{ color: getColorForProfit(point.profit) }}>
+                        Lat: {point.latitude}, Lon: {point.longitude}, Profit: {point.profit}
+                    </li>
+                ))}
+            </ul>
         </div>
     );
 };

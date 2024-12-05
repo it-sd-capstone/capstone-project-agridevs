@@ -7,7 +7,6 @@ const createTables = async () => {
         await pool.query('DROP TABLE IF EXISTS profits CASCADE;');
         await pool.query('DROP TABLE IF EXISTS costs CASCADE;');
         await pool.query('DROP TABLE IF EXISTS yield_data CASCADE;');
-        await pool.query('DROP TABLE IF EXISTS field_boundary CASCADE;');
         await pool.query('DROP TABLE IF EXISTS fields CASCADE;');
         await pool.query('DROP TABLE IF EXISTS users CASCADE;');
 
@@ -29,19 +28,6 @@ const createTables = async () => {
                                     user_id INTEGER REFERENCES users(id),
                                     name VARCHAR(100) NOT NULL,
                                     created_at TIMESTAMP DEFAULT NOW()
-            );
-        `);
-
-        // Create field_boundary table
-        await pool.query(`
-            CREATE TABLE field_boundary (
-                                            id SERIAL PRIMARY KEY,
-                                            field_id INTEGER REFERENCES fields(id) ON DELETE CASCADE,
-                                            user_id INTEGER REFERENCES users(id),
-                                            latitude DOUBLE PRECISION NOT NULL,
-                                            longitude DOUBLE PRECISION NOT NULL,
-                                            point_order INTEGER NOT NULL,
-                                            UNIQUE (field_id, point_order)
             );
         `);
 
