@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../utils/authMiddleware');
+const authenticateToken = require('../utils/authMiddleware');
 const fieldController = require('../controllers/fieldController');
 const multer = require('multer');
 const path = require('path');
