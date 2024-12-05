@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import './components/styles/UploadPage.css';
+import './styles/UploadPage.css';
 
 const UploadPage = () => {
     const [fieldName, setFieldName] = useState('');
