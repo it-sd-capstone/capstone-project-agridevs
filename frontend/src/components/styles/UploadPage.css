@@ -7,50 +7,33 @@
     margin-bottom: 30px;
 }
 
-.upload-section {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
-}
-
-.left-section,
-.right-section {
-    width: 100%;
-    max-width: 48%;
-    box-sizing: border-box;
+.form-group {
     margin-bottom: 20px;
+    text-align: center;
 }
 
-.left-section label,
-.right-section label {
+.form-group label {
     display: block;
     font-weight: bold;
     margin-bottom: 10px;
 }
 
-.left-section input[type="file"] {
-    width: 100%;
+.form-group input[type="file"],
+.form-group input[type="number"],
+.form-group input[type="text"] {
+    width: 80%;
+    max-width: 400px;
     padding: 10px;
-}
-
-.right-section input[type="number"],
-.right-section input[type="text"] {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
+    margin: 5px auto;
     border: 1px solid #ccc;
     border-radius: 4px;
 }
 
-.right-section input::placeholder {
+.form-group input::placeholder {
     color: #aaa;
 }
 
-button {
+.upload-button {
     display: block;
     width: 200px;
     margin: 30px auto 0;
@@ -62,18 +45,12 @@ button {
     font-size: 1rem;
 }
 
-button:hover {
+.upload-button:hover {
     background-color: #218838;
 }
 
-.error {
+.error-message {
     text-align: center;
+    color: red;
     margin-top: 20px;
-}
-
-@media (max-width: 768px) {
-    .left-section,
-    .right-section {
-        max-width: 100%;
-    }
 }

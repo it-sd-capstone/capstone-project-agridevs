@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import './styles/UploadPage.css';
 
 const UploadPage = () => {
     const [fieldName, setFieldName] = useState('');
@@ -14,14 +15,19 @@ const UploadPage = () => {
     });
 
     const [file, setFile] = useState(null);
+    const [boundaryFile, setBoundaryFile] = useState(null);
 
     const [error, setError] = useState(null);
 
     const navigate = useNavigate();
 
-    // Handle changes to the file input
+    // Handle changes to the file inputs
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
+    };
+
+    const handleBoundaryFileChange = (e) => {
+        setBoundaryFile(e.target.files[0]);
     };
 
     // Handle changes to the cost inputs
@@ -32,7 +38,12 @@ const UploadPage = () => {
     // Handle the upload process
     const handleUpload = async () => {
         if (!file) {
-            setError('Please select a file to upload.');
+            setError('Please select a yield data file to upload.');
+            return;
+        }
+
+        if (!boundaryFile) {
+            setError('Please select a field boundary file to upload.');
             return;
         }
 
@@ -79,6 +90,22 @@ const UploadPage = () => {
 
             const fieldId = yieldDataResponse.data.fieldId;
 
+            // Upload field boundary data
+            const boundaryFormData = new FormData();
+            boundaryFormData.append('boundaryFile', boundaryFile);
+            boundaryFormData.append('fieldId', fieldId);
+
+            await axios.post(
+                `${process.env.REACT_APP_API_BASE_URL}/field/boundary`,
+                boundaryFormData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
             // Submit costs along with the field ID
             const costsWithFieldId = { ...costs, fieldId };
             await axios.post(
@@ -104,21 +131,18 @@ const UploadPage = () => {
             );
 
             // Navigate to the map page after successful profit calculation
-            navigate('/map');
+            navigate(`/map/${fieldId}`);
         } catch (err) {
             console.error('Error uploading data:', err);
 
             if (err.response) {
-                // The request was made, and the server responded with a status code
                 console.error('Response data:', err.response.data);
                 console.error('Response status:', err.response.status);
                 setError(`Error: ${err.response.data.error || 'Failed to upload data.'}`);
             } else if (err.request) {
-                // The request was made, but no response was received
                 console.error('Request made but no response:', err.request);
                 setError('No response from server. Please try again later.');
             } else {
-                // Something else happened
                 console.error('Error:', err.message);
                 setError('An error occurred. Please try again.');
             }
@@ -142,6 +166,10 @@ const UploadPage = () => {
             <div className="form-group">
                 <label>Upload Yield CSV File:</label>
                 <input type="file" onChange={handleFileChange} accept=".csv" />
+            </div>
+            <div className="form-group">
+                <label>Upload Field Boundary CSV File:</label>
+                <input type="file" onChange={handleBoundaryFileChange} accept=".csv" />
             </div>
             <div className="form-group">
                 <label>Enter Costs:</label>

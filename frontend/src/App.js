@@ -14,7 +14,7 @@ function App() {
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/upload" element={<UploadPage />} />
-                <Route path="/map" element={<MapView />} />
+                <Route path="/map/:fieldId" element={<MapView />} /> {/* Updated Route */}
                 <Route path="/register" element={<Register />} />
                 <Route path="/login" element={<Login />} />
             </Routes>
