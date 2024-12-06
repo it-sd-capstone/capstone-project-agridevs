@@ -6,7 +6,7 @@ const fieldController = require('../controllers/fieldController');
 // Get data points with profit
 router.get('/:fieldId/data-points', authenticateToken, fieldController.getDataPoints);
 
-// Get field averages
-router.get('/:fieldId/averages', authenticateToken, fieldController.getFieldAverages);
+// Get GeoJSON data for map
+router.get('/:fieldId/geojson', authenticateToken, fieldController.getGeoJSONData);
 
 module.exports = router;
