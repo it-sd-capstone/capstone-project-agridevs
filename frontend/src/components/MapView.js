@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, GeoJSON, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import './styles/MapView.css';
+import L from 'leaflet';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import L from 'leaflet';
+import './styles/MapView.css';
 
 const MapView = () => {
+    const [map, setMap] = useState(null);
     const [geoJsonData, setGeoJsonData] = useState(null);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
@@ -47,16 +46,63 @@ const MapView = () => {
         fetchProfitData();
     }, [navigate, fieldId]);
 
-    const MapBounds = () => {
-        const map = useMap();
-        useEffect(() => {
-            if (geoJsonData) {
-                const geoJsonLayer = L.geoJSON(geoJsonData);
-                map.fitBounds(geoJsonLayer.getBounds());
+    useEffect(() => {
+        if (!map) {
+            // Initialize the map only once
+            const initialMap = L.map('map', {
+                center: [0, 0], // Default center
+                zoom: 2, // Default zoom level
+            });
+
+            // Add a base layer (plain white canvas with grid lines)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+            }).addTo(initialMap);
+
+            setMap(initialMap);
+        }
+    }, [map]);
+
+    useEffect(() => {
+        if (map && geoJsonData) {
+            // Clear existing layers
+            map.eachLayer((layer) => {
+                if (layer instanceof L.Marker || layer instanceof L.CircleMarker || layer instanceof L.LayerGroup) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            const layerGroup = L.layerGroup().addTo(map);
+
+            // Add GeoJSON data to the map
+            geoJsonData.features.forEach((feature) => {
+                const latlng = [feature.geometry.coordinates[1], feature.geometry.coordinates[0]];
+
+                // Create a circle marker with color based on profit
+                const circleMarker = L.circleMarker(latlng, {
+                    radius: 5,
+                    fillColor:
+                        feature.properties.profit < 0
+                            ? 'red'
+                            : feature.properties.profit > 0
+                                ? 'green'
+                                : 'yellow',
+                    color: '#000',
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8,
+                }).bindPopup(`Profit: $${feature.properties.profit.toFixed(2)}`);
+
+                layerGroup.addLayer(circleMarker);
+            });
+
+            // Adjust map bounds to fit all points
+            const bounds = layerGroup.getBounds();
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [20, 20] });
             }
-        }, [geoJsonData, map]);
-        return null;
-    };
+        }
+    }, [map, geoJsonData]);
 
     if (error) {
         return <div className="error-message">{error}</div>;
@@ -64,39 +110,7 @@ const MapView = () => {
 
     return (
         <div className="map-container">
-            <MapContainer
-                center={[0, 0]} // Default center; will adjust based on GeoJSON
-                zoom={2}
-                style={{ height: '100%', width: '100%' }}
-                scrollWheelZoom={true}
-            >
-                {geoJsonData && (
-                    <>
-                        <GeoJSON
-                            data={geoJsonData}
-                            pointToLayer={(feature, latlng) => {
-                                return L.circleMarker(latlng, {
-                                    radius: 5,
-                                    fillColor:
-                                        feature.properties.profit < 0
-                                            ? 'red'
-                                            : feature.properties.profit > 0
-                                                ? 'green'
-                                                : 'yellow',
-                                    color: '#000',
-                                    weight: 1,
-                                    opacity: 1,
-                                    fillOpacity: 0.8,
-                                });
-                            }}
-                            onEachFeature={(feature, layer) => {
-                                layer.bindPopup(`Profit: $${feature.properties.profit.toFixed(2)}`);
-                            }}
-                        />
-                        <MapBounds />
-                    </>
-                )}
-            </MapContainer>
+            <div id="map" style={{ height: '100vh', width: '100%' }}></div>
         </div>
     );
 };
