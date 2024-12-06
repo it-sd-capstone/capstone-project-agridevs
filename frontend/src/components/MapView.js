@@ -1,19 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import L from 'leaflet';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './styles/MapView.css';
 
 const MapView = () => {
-    const mapRef = useRef(null);
-    const canvasLayerRef = useRef(null);
+    const [map, setMap] = useState(null);
     const [geoJsonData, setGeoJsonData] = useState(null);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
     const fieldId = new URLSearchParams(location.search).get('fieldId'); // Parse fieldId from URL
 
-    // Fetch profit data
     useEffect(() => {
         const fetchProfitData = async () => {
             try {
@@ -48,61 +46,60 @@ const MapView = () => {
         fetchProfitData();
     }, [navigate, fieldId]);
 
-    // Initialize the map
     useEffect(() => {
-        if (!mapRef.current) {
-            mapRef.current = L.map('map', {
+        if (!map) {
+            // Initialize the map only once
+            const initialMap = L.map('map', {
                 center: [0, 0], // Default center
                 zoom: 2, // Default zoom level
-                zoomControl: true,
             });
 
-            // Add a blank white background layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
-            }).addTo(mapRef.current);
+            // Add Mapbox as the base layer
+            L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/light-v10/tiles/{z}/{x}/{y}?access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`, {
+                attribution: 'Map data &copy; <a href="https://www.mapbox.com/">Mapbox</a> contributors',
+                tileSize: 512,
+                zoomOffset: -1,
+            }).addTo(initialMap);
 
-            // Add a canvas overlay
-            canvasLayerRef.current = L.canvasLayer().addTo(mapRef.current);
+            setMap(initialMap);
         }
-    }, []);
+    }, [map]);
 
-    // Draw pixels on the canvas
     useEffect(() => {
-        if (geoJsonData && canvasLayerRef.current) {
-            const canvas = canvasLayerRef.current._canvas;
-            const ctx = canvas.getContext('2d');
+        if (map && geoJsonData) {
+            const canvasLayer = L.layerGroup().addTo(map);
 
-            // Clear the canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const bounds = mapRef.current.getBounds();
-            const scaleX = canvas.width / bounds.getEast() - bounds.getWest();
-            const scaleY = canvas.height / bounds.getNorth() - bounds.getSouth();
-
+            // Paint points as pixels
             geoJsonData.features.forEach((feature, index) => {
-                const lat = feature.geometry.coordinates[1];
-                const lng = feature.geometry.coordinates[0];
-
-                // Apply a small offset to prevent overlapping points
-                const offsetLat = lat + index * 0.00005;
-                const offsetLng = lng + index * 0.00005;
-
-                // Project coordinates to canvas space
-                const x = (offsetLng - bounds.getWest()) * scaleX;
-                const y = (bounds.getNorth() - offsetLat) * scaleY;
-
-                // Set color based on profit
+                const latlng = [feature.geometry.coordinates[1], feature.geometry.coordinates[0]];
                 const profit = feature.properties.profit;
-                const color =
-                    profit < 0 ? 'red' : profit > 0 ? 'green' : 'yellow';
 
-                // Paint a pixel (or small rectangle) for the point
-                ctx.fillStyle = color;
-                ctx.fillRect(x, y, 2, 2); // Adjust size for visibility
+                // Color based on profit
+                const color = profit < 0 ? 'red' : profit > 0 ? 'green' : 'yellow';
+
+                // Adjust lat/lng to prevent exact overlap
+                const adjustedLat = latlng[0] + index * 0.00005;
+                const adjustedLng = latlng[1] + index * 0.00005;
+
+                // Create a small circle to mimic a pixel
+                L.circleMarker([adjustedLat, adjustedLng], {
+                    radius: 1, // Pixel-like size
+                    fillColor: color,
+                    fillOpacity: 1,
+                    stroke: false,
+                }).addTo(canvasLayer);
             });
+
+            // Fit bounds to all points
+            const bounds = L.latLngBounds(geoJsonData.features.map((feature) => [
+                feature.geometry.coordinates[1],
+                feature.geometry.coordinates[0],
+            ]));
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [20, 20] });
+            }
         }
-    }, [geoJsonData]);
+    }, [map, geoJsonData]);
 
     if (error) {
         return <div className="error-message">{error}</div>;
