@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './styles/MapView.css';
 
 const MapView = () => {
-    const [map, setMap] = useState(null);
+    const mapRef = useRef(null);
+    const canvasLayerRef = useRef(null);
     const [geoJsonData, setGeoJsonData] = useState(null);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
     const fieldId = new URLSearchParams(location.search).get('fieldId'); // Parse fieldId from URL
 
+    // Fetch profit data
     useEffect(() => {
         const fetchProfitData = async () => {
             try {
@@ -46,63 +48,61 @@ const MapView = () => {
         fetchProfitData();
     }, [navigate, fieldId]);
 
+    // Initialize the map
     useEffect(() => {
-        if (!map) {
-            // Initialize the map only once
-            const initialMap = L.map('map', {
+        if (!mapRef.current) {
+            mapRef.current = L.map('map', {
                 center: [0, 0], // Default center
                 zoom: 2, // Default zoom level
+                zoomControl: true,
             });
 
-            // Add a base layer (plain white canvas with grid lines)
+            // Add a blank white background layer
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
-            }).addTo(initialMap);
+            }).addTo(mapRef.current);
 
-            setMap(initialMap);
+            // Add a canvas overlay
+            canvasLayerRef.current = L.canvasLayer().addTo(mapRef.current);
         }
-    }, [map]);
+    }, []);
 
+    // Draw pixels on the canvas
     useEffect(() => {
-        if (map && geoJsonData) {
-            // Clear existing layers
-            map.eachLayer((layer) => {
-                if (layer instanceof L.Marker || layer instanceof L.CircleMarker || layer instanceof L.LayerGroup) {
-                    map.removeLayer(layer);
-                }
+        if (geoJsonData && canvasLayerRef.current) {
+            const canvas = canvasLayerRef.current._canvas;
+            const ctx = canvas.getContext('2d');
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const bounds = mapRef.current.getBounds();
+            const scaleX = canvas.width / bounds.getEast() - bounds.getWest();
+            const scaleY = canvas.height / bounds.getNorth() - bounds.getSouth();
+
+            geoJsonData.features.forEach((feature, index) => {
+                const lat = feature.geometry.coordinates[1];
+                const lng = feature.geometry.coordinates[0];
+
+                // Apply a small offset to prevent overlapping points
+                const offsetLat = lat + index * 0.00005;
+                const offsetLng = lng + index * 0.00005;
+
+                // Project coordinates to canvas space
+                const x = (offsetLng - bounds.getWest()) * scaleX;
+                const y = (bounds.getNorth() - offsetLat) * scaleY;
+
+                // Set color based on profit
+                const profit = feature.properties.profit;
+                const color =
+                    profit < 0 ? 'red' : profit > 0 ? 'green' : 'yellow';
+
+                // Paint a pixel (or small rectangle) for the point
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, 2, 2); // Adjust size for visibility
             });
-
-            const layerGroup = L.layerGroup().addTo(map);
-
-            // Add GeoJSON data to the map
-            geoJsonData.features.forEach((feature) => {
-                const latlng = [feature.geometry.coordinates[1], feature.geometry.coordinates[0]];
-
-                // Create a circle marker with color based on profit
-                const circleMarker = L.circleMarker(latlng, {
-                    radius: 5,
-                    fillColor:
-                        feature.properties.profit < 0
-                            ? 'red'
-                            : feature.properties.profit > 0
-                                ? 'green'
-                                : 'yellow',
-                    color: '#000',
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.8,
-                }).bindPopup(`Profit: $${feature.properties.profit.toFixed(2)}`);
-
-                layerGroup.addLayer(circleMarker);
-            });
-
-            // Adjust map bounds to fit all points
-            const bounds = layerGroup.getBounds();
-            if (bounds.isValid()) {
-                map.fitBounds(bounds, { padding: [20, 20] });
-            }
         }
-    }, [map, geoJsonData]);
+    }, [geoJsonData]);
 
     if (error) {
         return <div className="error-message">{error}</div>;
