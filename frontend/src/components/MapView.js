@@ -55,11 +55,14 @@ const MapView = () => {
             });
 
             // Add Mapbox as the base layer
-            L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/light-v10/tiles/{z}/{x}/{y}?access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`, {
-                attribution: 'Map data &copy; <a href="https://www.mapbox.com/">Mapbox</a> contributors',
-                tileSize: 512,
-                zoomOffset: -1,
-            }).addTo(initialMap);
+            L.tileLayer(
+                `https://api.mapbox.com/styles/v1/mapbox/light-v10/tiles/{z}/{x}/{y}?access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`,
+                {
+                    attribution: 'Map data &copy; <a href="https://www.mapbox.com/">Mapbox</a> contributors',
+                    tileSize: 512,
+                    zoomOffset: -1,
+                }
+            ).addTo(initialMap);
 
             setMap(initialMap);
         }
@@ -67,7 +70,7 @@ const MapView = () => {
 
     useEffect(() => {
         if (map && geoJsonData) {
-            const canvasLayer = L.layerGroup().addTo(map);
+            const layerGroup = L.layerGroup().addTo(map);
 
             // Paint points as pixels
             geoJsonData.features.forEach((feature, index) => {
@@ -83,18 +86,20 @@ const MapView = () => {
 
                 // Create a small circle to mimic a pixel
                 L.circleMarker([adjustedLat, adjustedLng], {
-                    radius: 1, // Pixel-like size
+                    radius: 2, // Slightly larger for visibility
                     fillColor: color,
                     fillOpacity: 1,
                     stroke: false,
-                }).addTo(canvasLayer);
+                }).addTo(layerGroup);
             });
 
             // Fit bounds to all points
-            const bounds = L.latLngBounds(geoJsonData.features.map((feature) => [
-                feature.geometry.coordinates[1],
-                feature.geometry.coordinates[0],
-            ]));
+            const bounds = L.latLngBounds(
+                geoJsonData.features.map((feature) => [
+                    feature.geometry.coordinates[1],
+                    feature.geometry.coordinates[0],
+                ])
+            );
             if (bounds.isValid()) {
                 map.fitBounds(bounds, { padding: [20, 20] });
             }
