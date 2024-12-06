@@ -33,6 +33,7 @@ const MapView = () => {
                 });
 
                 if (response.data && response.data.features) {
+                    console.log('GeoJSON Data Fetched:', response.data); // Debugging fetched data
                     setGeoJsonData(response.data);
                 } else {
                     throw new Error('Invalid GeoJSON data format.');
@@ -48,7 +49,6 @@ const MapView = () => {
 
     useEffect(() => {
         if (!map) {
-            // Initialize the map only once
             const initialMap = L.map('map', {
                 center: [0, 0], // Default center
                 zoom: 2, // Default zoom level
@@ -70,23 +70,23 @@ const MapView = () => {
 
     useEffect(() => {
         if (map && geoJsonData) {
+            console.log('Rendering GeoJSON data to map...'); // Debugging rendering process
             const layerGroup = L.layerGroup().addTo(map);
 
-            // Paint points as pixels
             geoJsonData.features.forEach((feature, index) => {
+                console.log('Feature:', feature); // Log each feature for debugging
+
                 const latlng = [feature.geometry.coordinates[1], feature.geometry.coordinates[0]];
                 const profit = feature.properties.profit;
 
-                // Color based on profit
                 const color = profit < 0 ? 'red' : profit > 0 ? 'green' : 'yellow';
 
-                // Adjust lat/lng to prevent exact overlap
+                // Offset lat/lng slightly to prevent overlapping points
                 const adjustedLat = latlng[0] + index * 0.00005;
                 const adjustedLng = latlng[1] + index * 0.00005;
 
-                // Create a small circle to mimic a pixel
                 L.circleMarker([adjustedLat, adjustedLng], {
-                    radius: 2, // Slightly larger for visibility
+                    radius: 2, // Small radius for pixel-like display
                     fillColor: color,
                     fillOpacity: 1,
                     stroke: false,
@@ -102,6 +102,8 @@ const MapView = () => {
             );
             if (bounds.isValid()) {
                 map.fitBounds(bounds, { padding: [20, 20] });
+            } else {
+                console.error('Invalid bounds for map.'); // Debugging bounds
             }
         }
     }, [map, geoJsonData]);
