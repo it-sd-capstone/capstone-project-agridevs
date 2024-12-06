@@ -11,13 +11,15 @@ function App() {
     return (
         <Router>
             <Navbar />
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/upload" element={<UploadPage />} />
-                <Route path="/map" element={<MapView />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/login" element={<Login />} />
-            </Routes>
+            <div style={{ marginTop: '80px' }}>
+                <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/upload" element={<UploadPage />} />
+                    <Route path="/map" element={<MapView />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/login" element={<Login />} />
+                </Routes>
+            </div>
         </Router>
     );
 }

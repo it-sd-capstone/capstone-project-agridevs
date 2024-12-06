@@ -1,80 +1,104 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import L from 'leaflet';
+import { MapContainer, GeoJSON, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './styles/MapView.css';
+import axios from 'axios';
+import { useNavigate, useLocation } from 'react-router-dom';
+import L from 'leaflet';
 
 const MapView = () => {
     const [geoJsonData, setGeoJsonData] = useState(null);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
+    const location = useLocation();
+    const fieldId = new URLSearchParams(location.search).get('fieldId'); // Parse fieldId from URL
 
     useEffect(() => {
-        // Fetch profit data from backend
         const fetchProfitData = async () => {
             try {
                 const token = localStorage.getItem('token');
-
                 if (!token) {
                     console.error('No token found. Redirecting to login page.');
                     navigate('/login');
                     return;
                 }
 
-                const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/profit/geojson`, {
+                const endpoint = fieldId
+                    ? `${process.env.REACT_APP_API_BASE_URL}/profit/geojson/${fieldId}`
+                    : `${process.env.REACT_APP_API_BASE_URL}/profit/geojson`;
+
+                const response = await axios.get(endpoint, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
                 });
 
-                setGeoJsonData(response.data);
+                if (response.data && response.data.features) {
+                    setGeoJsonData(response.data);
+                } else {
+                    throw new Error('Invalid GeoJSON data format.');
+                }
             } catch (error) {
                 console.error('Error fetching GeoJSON data:', error);
-
-                if (error.response && error.response.status === 401) {
-                    navigate('/login'); // Unauthorized access
-                } else {
-                    setError('Failed to load profit data. Please try again later.');
-                }
+                setError('An error occurred while fetching the profit data. Please try again later.');
             }
         };
 
         fetchProfitData();
-    }, [navigate]);
+    }, [navigate, fieldId]);
 
-    useEffect(() => {
-        if (geoJsonData) {
-            const map = L.map('map').setView([0, 0], 2); // Default center and zoom
-            L.tileLayer('', { // Blank background
-                attribution: '',
-                maxZoom: 18,
-            }).addTo(map);
-
-            // Iterate over GeoJSON data to create circle markers
-            geoJsonData.features.forEach((feature) => {
-                const { coordinates } = feature.geometry;
-                const profit = feature.properties.profit;
-
-                L.circleMarker([coordinates[1], coordinates[0]], {
-                    radius: 5,
-                    fillColor: profit > 0 ? 'green' : profit < 0 ? 'red' : 'yellow',
-                    color: '#000',
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.8,
-                })
-                    .addTo(map)
-                    .bindPopup(`Profit: $${profit.toFixed(2)}`);
-            });
-        }
-    }, [geoJsonData]);
+    const MapBounds = () => {
+        const map = useMap();
+        useEffect(() => {
+            if (geoJsonData) {
+                const geoJsonLayer = L.geoJSON(geoJsonData);
+                map.fitBounds(geoJsonLayer.getBounds());
+            }
+        }, [geoJsonData, map]);
+        return null;
+    };
 
     if (error) {
-        return <div className="map-container error-message">{error}</div>;
+        return <div className="error-message">{error}</div>;
     }
 
-    return <div id="map" className="map-container"></div>;
+    return (
+        <div className="map-container">
+            <MapContainer
+                center={[0, 0]} // Default center; will adjust based on GeoJSON
+                zoom={2}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={true}
+            >
+                {geoJsonData && (
+                    <>
+                        <GeoJSON
+                            data={geoJsonData}
+                            pointToLayer={(feature, latlng) => {
+                                return L.circleMarker(latlng, {
+                                    radius: 5,
+                                    fillColor:
+                                        feature.properties.profit < 0
+                                            ? 'red'
+                                            : feature.properties.profit > 0
+                                                ? 'green'
+                                                : 'yellow',
+                                    color: '#000',
+                                    weight: 1,
+                                    opacity: 1,
+                                    fillOpacity: 0.8,
+                                });
+                            }}
+                            onEachFeature={(feature, layer) => {
+                                layer.bindPopup(`Profit: $${feature.properties.profit.toFixed(2)}`);
+                            }}
+                        />
+                        <MapBounds />
+                    </>
+                )}
+            </MapContainer>
+        </div>
+    );
 };
 
 export default MapView;
