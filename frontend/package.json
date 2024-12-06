@@ -3,13 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@turf/bbox": "^7.1.0",
     "axios": "1.7.4",
     "leaflet": "^1.9.4",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-leaflet": "^4.2.1",
-    "react-map-gl": "^6.1.16",
     "react-router-dom": "^6.0.2",
     "react-scripts": "^5.0.1",
     "web-vitals": "^1.1.2"
