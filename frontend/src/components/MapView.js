@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import L from 'leaflet';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './styles/MapView.css';
 
 const MapView = () => {
-    const [map, setMap] = useState(null);
+    const canvasRef = useRef(null);
     const [geoJsonData, setGeoJsonData] = useState(null);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
     const fieldId = new URLSearchParams(location.search).get('fieldId'); // Parse fieldId from URL
 
+    // Fetch data from the backend
     useEffect(() => {
         const fetchProfitData = async () => {
             try {
@@ -33,7 +33,6 @@ const MapView = () => {
                 });
 
                 if (response.data && response.data.features) {
-                    console.log('GeoJSON Data Fetched:', response.data); // Debugging fetched data
                     setGeoJsonData(response.data);
                 } else {
                     throw new Error('Invalid GeoJSON data format.');
@@ -47,74 +46,55 @@ const MapView = () => {
         fetchProfitData();
     }, [navigate, fieldId]);
 
+    // Render data onto canvas
     useEffect(() => {
-        if (!map) {
-            const initialMap = L.map('map', {
-                center: [0, 0], // Default center
-                zoom: 2, // Default zoom level
-            });
+        if (geoJsonData && canvasRef.current) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
 
-            // Add Mapbox as the base layer
-            L.tileLayer(
-                `https://api.mapbox.com/styles/v1/mapbox/light-v10/tiles/{z}/{x}/{y}?access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`,
-                {
-                    attribution: 'Map data &copy; <a href="https://www.mapbox.com/">Mapbox</a> contributors',
-                    tileSize: 512,
-                    zoomOffset: -1,
-                }
-            ).addTo(initialMap);
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            setMap(initialMap);
-        }
-    }, [map]);
+            // Get bounding box of coordinates
+            const latitudes = geoJsonData.features.map((f) => f.geometry.coordinates[1]);
+            const longitudes = geoJsonData.features.map((f) => f.geometry.coordinates[0]);
 
-    useEffect(() => {
-        if (map && geoJsonData) {
-            console.log('Rendering GeoJSON data to map...'); // Debugging rendering process
-            const layerGroup = L.layerGroup().addTo(map);
+            const minLat = Math.min(...latitudes);
+            const maxLat = Math.max(...latitudes);
+            const minLng = Math.min(...longitudes);
+            const maxLng = Math.max(...longitudes);
 
-            geoJsonData.features.forEach((feature, index) => {
-                console.log('Feature:', feature); // Log each feature for debugging
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
 
-                const latlng = [feature.geometry.coordinates[1], feature.geometry.coordinates[0]];
+            // Normalize and transform coordinates
+            geoJsonData.features.forEach((feature) => {
+                const [lng, lat] = feature.geometry.coordinates;
                 const profit = feature.properties.profit;
+
+                const x = ((lng - minLng) / (maxLng - minLng)) * canvasWidth;
+                const y = canvasHeight - ((lat - minLat) / (maxLat - minLat)) * canvasHeight;
 
                 const color = profit < 0 ? 'red' : profit > 0 ? 'green' : 'yellow';
 
-                // Offset lat/lng slightly to prevent overlapping points
-                const adjustedLat = latlng[0] + index * 0.00005;
-                const adjustedLng = latlng[1] + index * 0.00005;
-
-                L.circleMarker([adjustedLat, adjustedLng], {
-                    radius: 2, // Small radius for pixel-like display
-                    fillColor: color,
-                    fillOpacity: 1,
-                    stroke: false,
-                }).addTo(layerGroup);
+                // Draw pixel on canvas
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, 2, 2); // Adjust size of the pixel as needed
             });
-
-            // Fit bounds to all points
-            const bounds = L.latLngBounds(
-                geoJsonData.features.map((feature) => [
-                    feature.geometry.coordinates[1],
-                    feature.geometry.coordinates[0],
-                ])
-            );
-            if (bounds.isValid()) {
-                map.fitBounds(bounds, { padding: [20, 20] });
-            } else {
-                console.error('Invalid bounds for map.'); // Debugging bounds
-            }
         }
-    }, [map, geoJsonData]);
+    }, [geoJsonData]);
 
     if (error) {
         return <div className="error-message">{error}</div>;
     }
 
     return (
-        <div className="map-container">
-            <div id="map" style={{ height: '100vh', width: '100%' }}></div>
+        <div className="map-view-container">
+            <canvas ref={canvasRef} className="profit-canvas" width={800} height={600}></canvas>
+            <div className="info-panel">
+                <h2>Profit Map</h2>
+                <p>Room for additional information such as legends or statistics.</p>
+            </div>
         </div>
     );
 };
