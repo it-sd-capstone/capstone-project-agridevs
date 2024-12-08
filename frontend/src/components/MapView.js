@@ -78,8 +78,8 @@ const MapView = () => {
                 const [lng, lat] = feature.geometry.coordinates;
                 const profit = feature.properties.profit;
 
-                const x = ((lng - minLng) / (maxLng - minLng)) * canvasWidth;
-                const y = canvasHeight - ((lat - minLat) / (maxLat - minLat)) * canvasHeight;
+                const x = ((lng - minLng) / (maxLng - minLng)) * (canvasWidth - 20) + 10;
+                const y = canvasHeight - ((lat - minLat) / (maxLat - minLat)) * (canvasHeight - 20) - 10;
 
                 // Determine color tiers
                 let color = 'yellow';
@@ -93,7 +93,7 @@ const MapView = () => {
 
                 // Draw pixel on canvas
                 ctx.fillStyle = color;
-                ctx.fillRect(x, y, 8, 8);
+                ctx.fillRect(x, y, 10, 10);
             });
         }
     }, [geoJsonData]);
