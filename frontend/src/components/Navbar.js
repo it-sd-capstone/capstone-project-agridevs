@@ -15,7 +15,9 @@ function Navbar() {
     return (
         <nav className="navbar">
             <div className="navbar-logo">
-                <h1>Profit Map</h1>
+                <Link to={"/"}>
+                    <h1>Profit Map</h1>
+                </Link>
             </div>
             <ul className="navbar-links">
                 {token ? (
