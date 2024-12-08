@@ -6,11 +6,11 @@ import './styles/MapView.css';
 const MapView = () => {
     const canvasRef = useRef(null);
     const [geoJsonData, setGeoJsonData] = useState(null);
-    const [fieldName, setFieldName] = useState('');
+    const [fieldName, setFieldName] = useState('Profit Map');
     const [error, setError] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
-    const fieldId = new URLSearchParams(location.search).get('fieldId'); // Parse fieldId from URL
+    const fieldId = new URLSearchParams(location.search).get('fieldId');
 
     // Fetch data from the backend
     useEffect(() => {
@@ -35,6 +35,8 @@ const MapView = () => {
 
                 if (response.data && response.data.features) {
                     setGeoJsonData(response.data);
+
+                    // Extract fieldName from the GeoJSON data
                     if (response.data.features[0]?.properties?.fieldName) {
                         setFieldName(response.data.features[0].properties.fieldName);
                     }
@@ -83,15 +85,15 @@ const MapView = () => {
                 let color = 'yellow';
                 if (profit <= -500) color = 'darkred';
                 else if (profit <= -250) color = 'red';
-                else if (profit < 0) color = 'orange';
-                else if (profit === 0) color = 'yellow';
+                else if (profit < -50) color = 'orange';
+                else if (profit >= -50 && profit <= 50) color = 'yellow';
                 else if (profit <= 250) color = 'lightgreen';
                 else if (profit <= 500) color = 'green';
                 else color = 'darkgreen';
 
                 // Draw pixel on canvas
                 ctx.fillStyle = color;
-                ctx.fillRect(x, y, 4, 4); // Adjusted size of the pixel for continuity
+                ctx.fillRect(x, y, 8, 8);
             });
         }
     }, [geoJsonData]);
@@ -104,8 +106,32 @@ const MapView = () => {
         <div className="map-view-container">
             <canvas ref={canvasRef} className="profit-canvas" width={800} height={600}></canvas>
             <div className="info-panel">
-                <h2>{fieldName || 'Profit Map'}</h2>
+                <h2>{fieldName}</h2>
                 <p>Room for additional information such as legends or statistics.</p>
+                <div className="legend">
+                    <h3>Legend</h3>
+                    <div className="legend-item">
+                        <span className="color-box darkred"></span> Less than -$500
+                    </div>
+                    <div className="legend-item">
+                        <span className="color-box red"></span> -$500 to -$250
+                    </div>
+                    <div className="legend-item">
+                        <span className="color-box orange"></span> -$250 to -$50
+                    </div>
+                    <div className="legend-item">
+                        <span className="color-box yellow"></span> -$50 to $50
+                    </div>
+                    <div className="legend-item">
+                        <span className="color-box lightgreen"></span> $50 to $250
+                    </div>
+                    <div className="legend-item">
+                        <span className="color-box green"></span> $250 to $500
+                    </div>
+                    <div className="legend-item">
+                        <span className="color-box darkgreen"></span> Greater than $500
+                    </div>
+                </div>
             </div>
         </div>
     );
