@@ -6,6 +6,7 @@ import './styles/MapView.css';
 const MapView = () => {
     const canvasRef = useRef(null);
     const [geoJsonData, setGeoJsonData] = useState(null);
+    const [fieldName, setFieldName] = useState('');
     const [error, setError] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -34,6 +35,9 @@ const MapView = () => {
 
                 if (response.data && response.data.features) {
                     setGeoJsonData(response.data);
+                    if (response.data.features[0]?.properties?.fieldName) {
+                        setFieldName(response.data.features[0].properties.fieldName);
+                    }
                 } else {
                     throw new Error('Invalid GeoJSON data format.');
                 }
@@ -75,11 +79,19 @@ const MapView = () => {
                 const x = ((lng - minLng) / (maxLng - minLng)) * canvasWidth;
                 const y = canvasHeight - ((lat - minLat) / (maxLat - minLat)) * canvasHeight;
 
-                const color = profit < 0 ? 'red' : profit > 0 ? 'green' : 'yellow';
+                // Determine color tiers
+                let color = 'yellow';
+                if (profit <= -500) color = 'darkred';
+                else if (profit <= -250) color = 'red';
+                else if (profit < 0) color = 'orange';
+                else if (profit === 0) color = 'yellow';
+                else if (profit <= 250) color = 'lightgreen';
+                else if (profit <= 500) color = 'green';
+                else color = 'darkgreen';
 
                 // Draw pixel on canvas
                 ctx.fillStyle = color;
-                ctx.fillRect(x, y, 2, 2); // Adjust size of the pixel as needed
+                ctx.fillRect(x, y, 4, 4); // Adjusted size of the pixel for continuity
             });
         }
     }, [geoJsonData]);
@@ -92,7 +104,7 @@ const MapView = () => {
         <div className="map-view-container">
             <canvas ref={canvasRef} className="profit-canvas" width={800} height={600}></canvas>
             <div className="info-panel">
-                <h2>Profit Map</h2>
+                <h2>{fieldName || 'Profit Map'}</h2>
                 <p>Room for additional information such as legends or statistics.</p>
             </div>
         </div>
