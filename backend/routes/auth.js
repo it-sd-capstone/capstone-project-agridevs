@@ -34,7 +34,7 @@ router.post('/register', async (req, res) => {
             expiresIn: '24h',
         });
 
-        res.json({ token, user: newUser.rows[0] });
+        res.json({ token, user: { id: newUser.rows[0].id, username: newUser.rows[0].username, email: newUser.rows[0].email } });
     } catch (err) {
         console.error('Error during registration:', err);
         res.status(500).json({ error: 'Server error during registration.', details: err.message });
