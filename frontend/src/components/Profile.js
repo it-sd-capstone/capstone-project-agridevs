@@ -1,12 +1,21 @@
-import React from "react";
+import React, {useEffect} from "react";
 import './styles/Profile.css';
 import {Link} from "react-router-dom";
 
 const Profile = () => {
+    const [username, setUsername] = React.useState("");
+
+    useEffect(() => {
+        const storedUsername = localStorage.getItem("username");
+        if (storedUsername) {
+            setUsername(storedUsername);
+        }
+    }, []);
+
     return (
         <div className="profile-container">
-            <h1>Welcome to Your Profile</h1>
-            <p>Here you can manage and view your fields.</p>
+            <h1>{username || "User"}'s ProfitMap Profile</h1>
+            <p>Upload you data here and generate a map to maximize profits.</p>
 
             <div className="home-buttons">
                 <Link to="/UploadPage">
