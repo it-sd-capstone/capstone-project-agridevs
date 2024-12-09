@@ -7,14 +7,6 @@ function Home() {
         <div className="home-page">
             <h1>Welcome to Profit Map</h1>
             <p>Analyze and visualize your field data for better agricultural decisions.</p>
-            <div className="home-buttons">
-                <Link to="/upload">
-                    <button>Upload Yield Data</button>
-                </Link>
-                <Link to="/map">
-                    <button>View Profit Map</button>
-                </Link>
-            </div>
         </div>
     );
 }
