@@ -4,6 +4,18 @@
 }
 
 .home-page h1 {
+    font-family: 'Anton', sans-serif;
+    font-size: 4rem; /* Adjust for your design */
+    font-weight: bold;
+    color: #2c3e50; /* Dark aggressive color */
+    text-transform: uppercase; /* Optional for emphasis */
+    letter-spacing: 2px; /* Add spacing for impact */
+    text-align: center; /* Center the header */
+    margin-top: 50px;
+}
+
+
+.home-page h1 {
     font-size: 2.5rem;
     margin-bottom: 20px;
 }

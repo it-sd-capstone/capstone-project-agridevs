@@ -16,6 +16,12 @@ const Profile = () => {
                     <button>View Profit Map</button>
                 </Link>
             </div>
+
+            <div className="data-container">
+                <div className="data-box">Container 1</div>
+                <div className="data-box">Container 2</div>
+            </div>
+
         </div>
     );
 }
