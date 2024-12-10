@@ -24,7 +24,7 @@ function Login() {
         try {
             const response = await axios.post(`${API_BASE_URL}/auth/login`, formData);
             localStorage.setItem('token', response.data.token);
-            localStorage.setItem('username', response.data.username);
+            localStorage.setItem('username', response.data.user.username);
             navigate('Profile');
         } catch (err) {
             console.error(err);
