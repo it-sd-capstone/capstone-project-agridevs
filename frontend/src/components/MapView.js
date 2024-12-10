@@ -1,24 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import './styles/MapView.css';
 
 const MapView = () => {
     const canvasRef = useRef(null);
+    const tooltipRef = useRef(null);
     const [geoJsonData, setGeoJsonData] = useState(null);
-    const [fieldName, setFieldName] = useState('Profit Map');
     const [error, setError] = useState(null);
-    const [avgProfit, setAvgProfit] = useState(null);
-    const navigate = useNavigate();
     const { fieldId } = useParams();
+    const navigate = useNavigate();
+    const token = localStorage.getItem('token');
 
-    // Zoom & pan state
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const isPanning = useRef(false);
     const panStart = useRef({ x: 0, y: 0 });
 
-    const token = localStorage.getItem('token');
+    const pointsRef = useRef([]);
 
     useEffect(() => {
         if (!token) {
@@ -40,14 +39,6 @@ const MapView = () => {
 
                 if (response.data && response.data.features) {
                     setGeoJsonData(response.data);
-                    if (response.data.features[0]?.properties?.fieldName) {
-                        setFieldName(response.data.features[0].properties.fieldName);
-                    } else {
-                        setFieldName(fieldId ? `Field ${fieldId}` : 'Entire Farm');
-                    }
-                    if (fieldId && response.data.avgProfit !== undefined) {
-                        setAvgProfit(response.data.avgProfit);
-                    }
                 } else {
                     throw new Error('Invalid GeoJSON data format.');
                 }
@@ -65,13 +56,11 @@ const MapView = () => {
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
-
         ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.translate(offset.x, offset.y);
         ctx.scale(scale, scale);
 
-        // Get bounding box of coordinates
         const latitudes = geoJsonData.features.map((f) => f.geometry.coordinates[1]);
         const longitudes = geoJsonData.features.map((f) => f.geometry.coordinates[0]);
 
@@ -82,6 +71,8 @@ const MapView = () => {
 
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
+
+        pointsRef.current = [];
 
         geoJsonData.features.forEach((feature) => {
             const [lng, lat] = feature.geometry.coordinates;
@@ -101,6 +92,8 @@ const MapView = () => {
 
             ctx.fillStyle = color;
             ctx.fillRect(x, y, 10, 10);
+
+            pointsRef.current.push({ x, y, width: 10, height: 10, profit });
         });
 
         ctx.restore();
@@ -108,18 +101,16 @@ const MapView = () => {
 
     useEffect(drawMap, [geoJsonData, scale, offset]);
 
-    // Mouse wheel for zoom
     const handleWheel = (e) => {
         e.preventDefault();
         const zoomFactor = 0.1;
         if (e.deltaY < 0) {
-            setScale(prev => Math.min(prev + zoomFactor, 10));
+            setScale((prev) => Math.min(prev + zoomFactor, 10));
         } else {
-            setScale(prev => Math.max(prev - zoomFactor, 0.1));
+            setScale((prev) => Math.max(prev - zoomFactor, 0.1));
         }
     };
 
-    // Mouse drag for pan
     const handleMouseDown = (e) => {
         isPanning.current = true;
         panStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
@@ -130,6 +121,33 @@ const MapView = () => {
             const newX = e.clientX - panStart.current.x;
             const newY = e.clientY - panStart.current.y;
             setOffset({ x: newX, y: newY });
+        } else {
+            const rect = canvasRef.current.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left - offset.x) / scale;
+            const mouseY = (e.clientY - rect.top - offset.y) / scale;
+
+            let hoveredPoint = null;
+            for (const p of pointsRef.current) {
+                if (
+                    mouseX >= p.x &&
+                    mouseX <= p.x + p.width &&
+                    mouseY >= p.y &&
+                    mouseY <= p.y + p.height
+                ) {
+                    hoveredPoint = p;
+                    break;
+                }
+            }
+
+            const tooltip = tooltipRef.current;
+            if (hoveredPoint) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = e.clientX + 10 + 'px';
+                tooltip.style.top = e.clientY + 10 + 'px';
+                tooltip.innerHTML = `Profit: $${hoveredPoint.profit.toFixed(2)}`;
+            } else {
+                tooltip.style.display = 'none';
+            }
         }
     };
 
@@ -140,6 +158,12 @@ const MapView = () => {
     if (error) {
         return <div className="error-message">{error}</div>;
     }
+
+    const title = geoJsonData?.title || (fieldId ? `Field ${fieldId}` : 'Your Farm');
+    const avgProfit = geoJsonData?.avgProfit;
+    const avgProfitText = avgProfit !== undefined && avgProfit !== null
+        ? `Average Profit (per acre): $${avgProfit.toFixed(2)}`
+        : '';
 
     return (
         <div className="map-view-container">
@@ -155,10 +179,8 @@ const MapView = () => {
                 onMouseLeave={handleMouseUp}
             ></canvas>
             <div className="info-panel">
-                <h2>{fieldName}</h2>
-                {avgProfit !== null && (
-                    <p><strong>Average Profit:</strong> ${avgProfit.toFixed(2)}</p>
-                )}
+                <h2>{fieldId ? title : 'Your Farm'}</h2>
+                {avgProfitText && <p>{avgProfitText}</p>}
                 <p>Use mouse wheel to zoom and click-drag to pan.</p>
                 <div className="legend">
                     <h3>Legend</h3>
@@ -185,6 +207,20 @@ const MapView = () => {
                     </div>
                 </div>
             </div>
+            <div
+                ref={tooltipRef}
+                style={{
+                    position: 'absolute',
+                    display: 'none',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    color: '#fff',
+                    padding: '5px 10px',
+                    borderRadius: '4px',
+                    pointerEvents: 'none',
+                    fontSize: '0.9rem',
+                    zIndex: 10,
+                }}
+            ></div>
         </div>
     );
 };
