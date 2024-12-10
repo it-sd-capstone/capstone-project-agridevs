@@ -38,8 +38,13 @@ const MapView = () => {
                 });
 
                 if (response.data && response.data.features) {
+                    // Valid GeoJSON
                     setGeoJsonData(response.data);
+                } else if (response.data && response.data.error) {
+                    // The backend returned an error message
+                    setError(response.data.error);
                 } else {
+                    // Neither features nor a known error message - invalid format
                     throw new Error('Invalid GeoJSON data format.');
                 }
             } catch (err) {

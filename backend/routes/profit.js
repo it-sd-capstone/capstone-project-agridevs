@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../db');
 const authenticateToken = require('../utils/authMiddleware');
 
-// Calculate and insert profit data
+// Calculate and insert profit data (unchanged)
 router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
     const { fieldId } = req.params;
     const userId = req.user.userId;
@@ -16,7 +16,7 @@ router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
 
         const yieldData = yieldDataResult.rows;
         if (yieldData.length === 0) {
-            return res.status(404).json({ error: 'No yield data found for the specified field.' });
+            return res.status(404).json({ error: 'No yield data found for the specified field. Please upload yield data first.' });
         }
 
         const costResult = await pool.query(
@@ -26,7 +26,7 @@ router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
 
         const costData = costResult.rows[0];
         if (!costData) {
-            return res.status(404).json({ error: 'No cost data found for the specified field.' });
+            return res.status(404).json({ error: 'No cost data found for the specified field. Please submit costs before calculating profit.' });
         }
 
         const totalCost = parseFloat(costData.fertilizer_cost) +
@@ -52,7 +52,7 @@ router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
     }
 });
 
-// Get GeoJSON data for map, with optional fieldId
+// Get GeoJSON data for map
 router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     const { fieldId } = req.params;
@@ -74,7 +74,6 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
             `;
             values = [userId, fieldId];
 
-            // Calculate average profit for the field
             const avgResult = await pool.query(`
                 SELECT f.name as field_name, AVG(p.profit) as avg_profit
                 FROM profits p
@@ -84,10 +83,12 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
                 GROUP BY f.name
             `, [fieldId, userId]);
 
-            avgProfit = parseFloat(avgResult.rows[0].avg_profit);
-            title = avgResult.rows[0].field_name;
+            if (avgResult.rows.length > 0) {
+                avgProfit = parseFloat(avgResult.rows[0].avg_profit);
+                title = avgResult.rows[0].field_name;
+            }
         } else {
-            // Entire farm data
+            // Entire farm
             query = `
                 SELECT yd.latitude, yd.longitude, p.profit, f.name AS field_name
                 FROM yield_data yd
@@ -97,7 +98,6 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
             `;
             values = [userId];
 
-            // Calculate farm-wide average profit
             const avgResult = await pool.query(`
                 SELECT AVG(p.profit) as avg_profit
                 FROM profits p
@@ -105,13 +105,17 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
                 WHERE yd.user_id = $1
             `, [userId]);
 
-            avgProfit = parseFloat(avgResult.rows[0].avg_profit);
+            if (avgResult.rows[0].avg_profit !== null) {
+                avgProfit = parseFloat(avgResult.rows[0].avg_profit);
+            }
         }
 
         const result = await pool.query(query, values);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'No profit data found.' });
+            return res.status(404).json({
+                error: 'No profit data found. Please ensure you have uploaded yield data, submitted costs, and run the profit calculation before viewing the map.'
+            });
         }
 
         const features = result.rows.map((row) => ({
