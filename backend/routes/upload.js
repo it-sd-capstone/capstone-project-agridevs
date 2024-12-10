@@ -20,38 +20,32 @@ const upload = multer({ storage: storage });
 router.post('/yield-data', authenticateToken, upload.single('file'), async (req, res) => {
     const userId = req.user.userId;
     const filePath = req.file.path;
-    const fieldName = req.body.field_name || 'Default Field Name'; // Get the field name from the request
+    const fieldName = req.body.field_name || 'Default Field Name';
 
     console.log('Received request to /upload/yield-data');
     console.log('User ID:', userId);
 
     try {
-        // Insert new field record with the provided name
         const fieldResult = await pool.query(
             'INSERT INTO fields (user_id, name) VALUES ($1, $2) RETURNING id',
             [userId, fieldName]
         );
-
         const fieldId = fieldResult.rows[0].id;
 
-        // Parse CSV file and insert yield data
         const yieldData = [];
         fs.createReadStream(filePath)
             .pipe(csvParser())
             .on('error', (err) => {
                 console.error('Error reading CSV file:', err);
-                fs.unlinkSync(filePath); // Delete the file if there is an error
+                fs.unlinkSync(filePath);
                 res.status(500).json({ error: 'Error reading CSV file.', details: err.message });
             })
             .on('data', (row) => {
-                // Validate and parse data
                 const latitude = parseFloat(row.Latitude || row.latitude);
                 const longitude = parseFloat(row.Longitude || row.longitude);
                 const yieldVolume = parseFloat(row['Yld Vol(Dry)(bu/ac)']);
 
-                if (isNaN(latitude) || isNaN(longitude) || isNaN(yieldVolume)) {
-                    console.error('Invalid data in CSV row:', row);
-                } else {
+                if (!isNaN(latitude) && !isNaN(longitude) && !isNaN(yieldVolume)) {
                     yieldData.push({
                         field_id: fieldId,
                         user_id: userId,
@@ -59,6 +53,8 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                         longitude: longitude,
                         yield_volume: yieldVolume,
                     });
+                } else {
+                    console.error('Invalid data in CSV row:', row);
                 }
             })
             .on('end', async () => {
@@ -68,7 +64,6 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                         return res.status(400).json({ error: 'No valid yield data found in the CSV file.' });
                     }
 
-                    // Prepare a bulk insert query
                     const queryText =
                         'INSERT INTO yield_data (field_id, user_id, latitude, longitude, yield_volume) VALUES ' +
                         yieldData.map((_, i) => `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`).join(', ');
@@ -82,8 +77,6 @@ router.post('/yield-data', authenticateToken, upload.single('file'), async (req,
                     ]);
 
                     await pool.query(queryText, queryValues);
-
-                    // Delete the uploaded file
                     fs.unlinkSync(filePath);
 
                     res.json({ message: 'Yield data uploaded successfully.', fieldId });

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import './styles/MapView.css';
 
 const MapView = () => {
@@ -8,21 +8,26 @@ const MapView = () => {
     const [geoJsonData, setGeoJsonData] = useState(null);
     const [fieldName, setFieldName] = useState('Profit Map');
     const [error, setError] = useState(null);
+    const [avgProfit, setAvgProfit] = useState(null);
     const navigate = useNavigate();
-    const location = useLocation();
-    const fieldId = new URLSearchParams(location.search).get('fieldId');
+    const { fieldId } = useParams();
 
-    // Fetch data from the backend
+    // Zoom & pan state
+    const [scale, setScale] = useState(1);
+    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    const isPanning = useRef(false);
+    const panStart = useRef({ x: 0, y: 0 });
+
+    const token = localStorage.getItem('token');
+
     useEffect(() => {
+        if (!token) {
+            navigate('/login');
+            return;
+        }
+
         const fetchProfitData = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    console.error('No token found. Redirecting to login page.');
-                    navigate('/login');
-                    return;
-                }
-
                 const endpoint = fieldId
                     ? `${process.env.REACT_APP_API_BASE_URL}/profit/geojson/${fieldId}`
                     : `${process.env.REACT_APP_API_BASE_URL}/profit/geojson`;
@@ -35,68 +40,102 @@ const MapView = () => {
 
                 if (response.data && response.data.features) {
                     setGeoJsonData(response.data);
-
-                    // Extract fieldName from the GeoJSON data
                     if (response.data.features[0]?.properties?.fieldName) {
                         setFieldName(response.data.features[0].properties.fieldName);
+                    } else {
+                        setFieldName(fieldId ? `Field ${fieldId}` : 'Entire Farm');
+                    }
+                    if (fieldId && response.data.avgProfit !== undefined) {
+                        setAvgProfit(response.data.avgProfit);
                     }
                 } else {
                     throw new Error('Invalid GeoJSON data format.');
                 }
-            } catch (error) {
-                console.error('Error fetching GeoJSON data:', error);
+            } catch (err) {
+                console.error('Error fetching GeoJSON data:', err);
                 setError('An error occurred while fetching the profit data. Please try again later.');
             }
         };
 
         fetchProfitData();
-    }, [navigate, fieldId]);
+    }, [navigate, fieldId, token]);
 
-    // Render data onto canvas
-    useEffect(() => {
-        if (geoJsonData && canvasRef.current) {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
+    const drawMap = () => {
+        if (!geoJsonData || !canvasRef.current) return;
 
-            // Clear the canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
 
-            // Get bounding box of coordinates
-            const latitudes = geoJsonData.features.map((f) => f.geometry.coordinates[1]);
-            const longitudes = geoJsonData.features.map((f) => f.geometry.coordinates[0]);
+        ctx.save();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.translate(offset.x, offset.y);
+        ctx.scale(scale, scale);
 
-            const minLat = Math.min(...latitudes);
-            const maxLat = Math.max(...latitudes);
-            const minLng = Math.min(...longitudes);
-            const maxLng = Math.max(...longitudes);
+        // Get bounding box of coordinates
+        const latitudes = geoJsonData.features.map((f) => f.geometry.coordinates[1]);
+        const longitudes = geoJsonData.features.map((f) => f.geometry.coordinates[0]);
 
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
+        const minLat = Math.min(...latitudes);
+        const maxLat = Math.max(...latitudes);
+        const minLng = Math.min(...longitudes);
+        const maxLng = Math.max(...longitudes);
 
-            // Normalize and transform coordinates
-            geoJsonData.features.forEach((feature) => {
-                const [lng, lat] = feature.geometry.coordinates;
-                const profit = feature.properties.profit;
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
 
-                const x = ((lng - minLng) / (maxLng - minLng)) * (canvasWidth - 20) + 10;
-                const y = canvasHeight - ((lat - minLat) / (maxLat - minLat)) * (canvasHeight - 20) - 10;
+        geoJsonData.features.forEach((feature) => {
+            const [lng, lat] = feature.geometry.coordinates;
+            const profit = feature.properties.profit;
 
-                // Determine color tiers
-                let color = 'yellow';
-                if (profit <= -500) color = 'darkred';
-                else if (profit <= -250) color = 'red';
-                else if (profit < -50) color = 'orange';
-                else if (profit >= -50 && profit <= 50) color = 'yellow';
-                else if (profit <= 250) color = 'lightgreen';
-                else if (profit <= 500) color = 'green';
-                else color = 'darkgreen';
+            const x = ((lng - minLng) / (maxLng - minLng)) * (canvasWidth - 20) + 10;
+            const y = canvasHeight - ((lat - minLat) / (maxLat - minLat)) * (canvasHeight - 20) - 10;
 
-                // Draw pixel on canvas
-                ctx.fillStyle = color;
-                ctx.fillRect(x, y, 10, 10);
-            });
+            let color = 'yellow';
+            if (profit <= -500) color = 'darkred';
+            else if (profit <= -250) color = 'red';
+            else if (profit < -50) color = 'orange';
+            else if (profit >= -50 && profit <= 50) color = 'yellow';
+            else if (profit <= 250) color = 'lightgreen';
+            else if (profit <= 500) color = 'green';
+            else color = 'darkgreen';
+
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, 10, 10);
+        });
+
+        ctx.restore();
+    };
+
+    useEffect(drawMap, [geoJsonData, scale, offset]);
+
+    // Mouse wheel for zoom
+    const handleWheel = (e) => {
+        e.preventDefault();
+        const zoomFactor = 0.1;
+        if (e.deltaY < 0) {
+            setScale(prev => Math.min(prev + zoomFactor, 10));
+        } else {
+            setScale(prev => Math.max(prev - zoomFactor, 0.1));
         }
-    }, [geoJsonData]);
+    };
+
+    // Mouse drag for pan
+    const handleMouseDown = (e) => {
+        isPanning.current = true;
+        panStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+    };
+
+    const handleMouseMove = (e) => {
+        if (isPanning.current) {
+            const newX = e.clientX - panStart.current.x;
+            const newY = e.clientY - panStart.current.y;
+            setOffset({ x: newX, y: newY });
+        }
+    };
+
+    const handleMouseUp = () => {
+        isPanning.current = false;
+    };
 
     if (error) {
         return <div className="error-message">{error}</div>;
@@ -104,10 +143,23 @@ const MapView = () => {
 
     return (
         <div className="map-view-container">
-            <canvas ref={canvasRef} className="profit-canvas" width={800} height={600}></canvas>
+            <canvas
+                ref={canvasRef}
+                className="profit-canvas"
+                width={800}
+                height={600}
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+            ></canvas>
             <div className="info-panel">
                 <h2>{fieldName}</h2>
-                <p>Room for additional information such as legends or statistics.</p>
+                {avgProfit !== null && (
+                    <p><strong>Average Profit:</strong> ${avgProfit.toFixed(2)}</p>
+                )}
+                <p>Use mouse wheel to zoom and click-drag to pan.</p>
                 <div className="legend">
                     <h3>Legend</h3>
                     <div className="legend-item">
