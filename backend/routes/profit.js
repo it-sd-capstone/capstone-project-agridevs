@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../db');
 const authenticateToken = require('../utils/authMiddleware');
 
-// Calculate and insert profit data (unchanged)
+// Calculate and insert profit data (unchanged from previous logic)
 router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
     const { fieldId } = req.params;
     const userId = req.user.userId;
@@ -52,7 +52,7 @@ router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
     }
 });
 
-// GeoJSON endpoint with optional fieldId
+// Get GeoJSON data for the map, with optional fieldId
 router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     const { fieldId } = req.params;
@@ -60,8 +60,11 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
     try {
         let query;
         let values;
+        let avgProfit = null;
+        let title = 'Your Farm';
+
         if (fieldId) {
-            // Fetch data for a specific field
+            // Specific field
             query = `
                 SELECT yd.latitude, yd.longitude, p.profit, f.name AS field_name
                 FROM yield_data yd
@@ -70,8 +73,19 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
                 WHERE yd.user_id = $1 AND yd.field_id = $2
             `;
             values = [userId, fieldId];
+
+            const avgResult = await pool.query(`
+                SELECT AVG(p.profit) as avg_profit, f.name as field_name
+                FROM profits p
+                JOIN yield_data yd ON p.yield_data_id = yd.id
+                JOIN fields f ON yd.field_id = f.id
+                WHERE yd.field_id = $1 AND yd.user_id = $2
+            `, [fieldId, userId]);
+
+            avgProfit = parseFloat(avgResult.rows[0].avg_profit);
+            title = avgResult.rows[0].field_name;
         } else {
-            // Fetch data for all fields owned by the user
+            // Entire farm
             query = `
                 SELECT yd.latitude, yd.longitude, p.profit, f.name AS field_name
                 FROM yield_data yd
@@ -80,6 +94,15 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
                 WHERE yd.user_id = $1
             `;
             values = [userId];
+
+            const avgResult = await pool.query(`
+                SELECT AVG(p.profit) as avg_profit
+                FROM profits p
+                JOIN yield_data yd ON p.yield_data_id = yd.id
+                WHERE yd.user_id = $1
+            `, [userId]);
+
+            avgProfit = parseFloat(avgResult.rows[0].avg_profit);
         }
 
         const result = await pool.query(query, values);
@@ -88,24 +111,11 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'No profit data found.' });
         }
 
-        // Calculate average profit if fieldId is provided
-        let avgProfit = null;
-        if (fieldId) {
-            const avgResult = await pool.query(`
-                SELECT AVG(p.profit) as avg_profit
-                FROM profits p
-                JOIN yield_data yd ON p.yield_data_id = yd.id
-                WHERE yd.field_id = $1 AND yd.user_id = $2
-            `, [fieldId, userId]);
-
-            avgProfit = parseFloat(avgResult.rows[0].avg_profit);
-        }
-
         const features = result.rows.map((row) => ({
             type: 'Feature',
             properties: {
                 profit: parseFloat(row.profit),
-                fieldName: row.field_name,
+                fieldName: row.field_name || 'Your Farm',
             },
             geometry: {
                 type: 'Point',
@@ -116,7 +126,8 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
         const geojson = {
             type: 'FeatureCollection',
             features: features,
-            ...(fieldId && { avgProfit })
+            avgProfit,
+            title
         };
 
         res.json(geojson);

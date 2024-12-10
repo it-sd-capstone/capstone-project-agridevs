@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const costRoutes = require('./routes/costs');
 const profitRoutes = require('./routes/profit');
+const fieldsRoutes = require('./routes/fields');
 
 const PORT = process.env.PORT || 5000;
 
@@ -26,8 +27,9 @@ app.use('/auth', authRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/costs', costRoutes);
 app.use('/profit', profitRoutes);
+app.use('/fields', fieldsRoutes);
 
-// Serve frontend
+// Serve frontend build
 app.use(express.static(path.join(__dirname, 'build')));
 
 app.get('*', (req, res) => {
