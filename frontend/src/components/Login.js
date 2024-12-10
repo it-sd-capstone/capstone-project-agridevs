@@ -5,26 +5,20 @@ import './styles/Login.css';
 import { API_BASE_URL } from '../config';
 
 function Login() {
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-    });
+    const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
-    // Handle input changes
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         try {
             const response = await axios.post(`${API_BASE_URL}/auth/login`, formData);
             localStorage.setItem('token', response.data.token);
-            navigate('/');
+            navigate('/profile'); // Go directly to profile
         } catch (err) {
             console.error(err);
             setError('Login failed. Please check your credentials.');

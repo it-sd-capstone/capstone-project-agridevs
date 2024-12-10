@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../db');
 const authenticateToken = require('../utils/authMiddleware');
 
-// Calculate and insert profit data (unchanged from previous logic)
+// Calculate and insert profit data
 router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
     const { fieldId } = req.params;
     const userId = req.user.userId;
@@ -52,7 +52,7 @@ router.post('/calculate/:fieldId', authenticateToken, async (req, res) => {
     }
 });
 
-// Get GeoJSON data for the map, with optional fieldId
+// Get GeoJSON data for map, with optional fieldId
 router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     const { fieldId } = req.params;
@@ -64,41 +64,44 @@ router.get('/geojson/:fieldId?', authenticateToken, async (req, res) => {
         let title = 'Your Farm';
 
         if (fieldId) {
-            // Specific field
+            // Field-specific data
             query = `
                 SELECT yd.latitude, yd.longitude, p.profit, f.name AS field_name
                 FROM yield_data yd
-                INNER JOIN profits p ON yd.id = p.yield_data_id
-                INNER JOIN fields f ON yd.field_id = f.id
+                         INNER JOIN profits p ON yd.id = p.yield_data_id
+                         INNER JOIN fields f ON yd.field_id = f.id
                 WHERE yd.user_id = $1 AND yd.field_id = $2
             `;
             values = [userId, fieldId];
 
+            // Calculate average profit for the field
             const avgResult = await pool.query(`
-                SELECT AVG(p.profit) as avg_profit, f.name as field_name
+                SELECT f.name as field_name, AVG(p.profit) as avg_profit
                 FROM profits p
-                JOIN yield_data yd ON p.yield_data_id = yd.id
-                JOIN fields f ON yd.field_id = f.id
+                         JOIN yield_data yd ON p.yield_data_id = yd.id
+                         JOIN fields f ON yd.field_id = f.id
                 WHERE yd.field_id = $1 AND yd.user_id = $2
+                GROUP BY f.name
             `, [fieldId, userId]);
 
             avgProfit = parseFloat(avgResult.rows[0].avg_profit);
             title = avgResult.rows[0].field_name;
         } else {
-            // Entire farm
+            // Entire farm data
             query = `
                 SELECT yd.latitude, yd.longitude, p.profit, f.name AS field_name
                 FROM yield_data yd
-                INNER JOIN profits p ON yd.id = p.yield_data_id
-                INNER JOIN fields f ON yd.field_id = f.id
+                         INNER JOIN profits p ON yd.id = p.yield_data_id
+                         INNER JOIN fields f ON yd.field_id = f.id
                 WHERE yd.user_id = $1
             `;
             values = [userId];
 
+            // Calculate farm-wide average profit
             const avgResult = await pool.query(`
                 SELECT AVG(p.profit) as avg_profit
                 FROM profits p
-                JOIN yield_data yd ON p.yield_data_id = yd.id
+                         JOIN yield_data yd ON p.yield_data_id = yd.id
                 WHERE yd.user_id = $1
             `, [userId]);
 
