@@ -27,9 +27,7 @@ function Navbar() {
                         <li><Link to="/upload">Upload Data</Link></li>
                         <li><Link to="/map">View Map</Link></li>
                         <li><Link to="/contact">Contact</Link></li>
-                        <li>
-                            <button onClick={handleLogout} className="logout-button">Logout</button>
-                        </li>
+                        <li><button onClick={handleLogout} className="logout-button">Logout</button></li>
                     </>
                 ) : (
                     <>
