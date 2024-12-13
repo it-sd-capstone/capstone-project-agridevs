@@ -14,7 +14,11 @@ function Navbar() {
     return (
         <nav className="navbar">
             <div className="navbar-logo">
-                <h1>Profit Map</h1>
+                <h1>
+                    <Link to="/" style={{ textDecoration: 'none', color: '#fff' }}>
+                        Profit Map
+                    </Link>
+                </h1>
             </div>
             <ul className="navbar-links">
                 {token ? (
@@ -23,7 +27,9 @@ function Navbar() {
                         <li><Link to="/upload">Upload Data</Link></li>
                         <li><Link to="/map">View Map</Link></li>
                         <li><Link to="/contact">Contact</Link></li>
-                        <li><button onClick={handleLogout} className="logout-button">Logout</button></li>
+                        <li>
+                            <button onClick={handleLogout} className="logout-button">Logout</button>
+                        </li>
                     </>
                 ) : (
                     <>

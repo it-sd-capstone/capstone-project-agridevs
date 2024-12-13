@@ -38,13 +38,10 @@ const MapView = () => {
                 });
 
                 if (response.data && response.data.features) {
-                    // Valid GeoJSON
                     setGeoJsonData(response.data);
                 } else if (response.data && response.data.error) {
-                    // The backend returned an error message
                     setError(response.data.error);
                 } else {
-                    // Neither features nor a known error message - invalid format
                     throw new Error('Invalid GeoJSON data format.');
                 }
             } catch (err) {
@@ -108,12 +105,37 @@ const MapView = () => {
 
     const handleWheel = (e) => {
         e.preventDefault();
+        if (!canvasRef.current) return;
+
         const zoomFactor = 0.1;
+        const rect = canvasRef.current.getBoundingClientRect();
+
+        // Mouse position relative to canvas
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Convert screen coords to "world" coords before zoom
+        const worldX = (mouseX - offset.x) / scale;
+        const worldY = (mouseY - offset.y) / scale;
+
+        let newScale;
         if (e.deltaY < 0) {
-            setScale((prev) => Math.min(prev + zoomFactor, 10));
+            // zoom in
+            newScale = scale + zoomFactor;
         } else {
-            setScale((prev) => Math.max(prev - zoomFactor, 0.1));
+            // zoom out
+            newScale = scale - zoomFactor;
         }
+
+        // Ensure scale stays within reasonable bounds
+        newScale = Math.max(0.1, Math.min(newScale, 10));
+
+        // Adjust offset so the point under the mouse stays in the same place
+        const newOffsetX = mouseX - worldX * newScale;
+        const newOffsetY = mouseY - worldY * newScale;
+
+        setScale(newScale);
+        setOffset({ x: newOffsetX, y: newOffsetY });
     };
 
     const handleMouseDown = (e) => {
